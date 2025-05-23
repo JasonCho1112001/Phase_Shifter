@@ -165,7 +165,8 @@ class Platformer extends Phaser.Scene {
 
     
         my.sprite.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, "playerOne");
-        my.sprite.player.setCollideWorldBounds(true);
+        this.physics.world.setBounds(0,0,120*18,20*18);
+         my.sprite.player.setCollideWorldBounds(true);
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);

@@ -29,7 +29,7 @@ let config = {
             }
         }
     },
-    width: 120*18,
+    width: 1440,
     height: 900,
     scene: [gameStart,Load, Platformer, gameWin,gameLose]
 }
