@@ -15,6 +15,8 @@ class Load extends Phaser.Scene {
         this.load.image("playerOne","tile_0045.png");
         this.load.image("playerTwo","tile_0046.png");  
         this.load.audio("collection","confirmation_002.ogg");
+        this.load.audio("damageSound","error_007.ogg");
+
         this.load.image("tilemap_tiles", "tilemap_packed.png");      // Packed tilemap
         this.load.tilemapTiledJSON("draft-platformer-level", "draft-platformer-level.tmj");   // Tilemap in JSON
         
@@ -77,6 +79,30 @@ class Load extends Phaser.Scene {
                 { key: "playerTwo" }
             ],
         });
+
+        this.anims.create({
+            key: 'pizzaFlip',
+            frames:[
+                {key:"food_tilemap_sheet", frame: 105},
+                {key:"food_tilemap_sheet", frame: 106}
+
+            ],
+            repeat: -1,
+            frameRate: 3  
+
+        });
+
+        this.anims.create({
+            key: 'beeFly',
+            frames:[
+                {key:"pixel_line_tiles", frame: 51},
+                {key:"pixel_line_tiles", frame: 52}
+
+            ],
+            repeat: -1,
+            frameRate: 10  
+ 
+        })
 
          // ...and pass to the next Scene
          this.scene.start("platformerScene");

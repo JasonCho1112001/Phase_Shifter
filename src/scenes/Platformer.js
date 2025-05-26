@@ -10,8 +10,8 @@ class Platformer extends Phaser.Scene {
 
     init() {
         // variables and settings
-        this.ACCELERATION = 400;
-        this.DRAG = 800;    // DRAG < ACCELERATION = icy slide
+        this.ACCELERATION = 300;
+        this.DRAG = 1200;    // DRAG < ACCELERATION = icy slide
         this.physics.world.gravity.y = 1500;
         this.JUMP_VELOCITY = -600;
         this.PARTICLE_VELOCITY = 50;
@@ -21,6 +21,13 @@ class Platformer extends Phaser.Scene {
         this.healthPoints = [];
 
         this.dashActive = false;
+        this.dashingState = false;
+
+        this.doubleJumpActive = false;
+        this.wallJumpActive = false;
+        this.doubleJumpAvailable = 0;
+        this.wallJumpAvailable = 0;
+
         this.playerFacedRight = false;
 
         
@@ -68,17 +75,36 @@ class Platformer extends Phaser.Scene {
             frame:28 
         });
 
-        this.enemyList = this.map.createFromObjects("Dangers",{
+        /*this.enemyList = this.map.createFromObjects("Dangers",{
             name: "enemy",
             key:"pixel_line_tiles",
             frame:56
-        });
+        });*/
 
-        this.powerUp = this.map.createFromObjects("Collectibles", {
-            name: "PowerUp",
+        this.dashPowerUp = this.map.createFromObjects("Collectibles", {
+            name: "dashPowerUp",
             key: "industrial_tilemap_sheet",
             frame: 61
         });
+
+        this.doubleJumpPowerUp = this.map.createFromObjects("Collectibles", {
+            name: "doubleJumpPowerUp",
+            key: "industrial_tilemap_sheet",
+            frame: 61
+        });
+        for(let elements of this.doubleJumpPowerUp){
+            elements.setTint(0xFF0000);
+        }
+
+        this.wallJumpPowerUp = this.map.createFromObjects("Collectibles", {
+            name: "wallJumpPowerUp",
+            key: "industrial_tilemap_sheet",
+            frame: 61
+        });
+
+        for(let elements of this.wallJumpPowerUp){
+            elements.setTint(0xFFFF00);
+        }
 
         this.spawn = this.map.getObjectLayer("Spawns").objects.find((obj) => obj.name === "spawnPoint");
         
@@ -87,9 +113,12 @@ class Platformer extends Phaser.Scene {
         this.physics.world.enable(this.collectibles, Phaser.Physics.Arcade.STATIC_BODY);
         this.physics.world.enable(this.bff, Phaser.Physics.Arcade.STATIC_BODY);
         this.physics.world.enable(this.envDangersList, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.enemyList);
+        //this.physics.world.enable(this.enemyList);
 
-        this.physics.world.enable(this.powerUp, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.dashPowerUp, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.doubleJumpPowerUp, Phaser.Physics.Arcade.STATIC_BODY);
+        this.physics.world.enable(this.wallJumpPowerUp, Phaser.Physics.Arcade.STATIC_BODY);
+
 
 
 
@@ -97,11 +126,11 @@ class Platformer extends Phaser.Scene {
         // This will be used for collision detection below.
         this.collectibleGroup = this.add.group(this.collectibles);
         this.dangersGroup = this.add.group(this.envDangersList);
-        this.enemyGroup = this.add.group(this.enemyList);
+        /*this.enemyGroup = this.add.group(this.enemyList);
 
         for(let elements of this.enemyList){
             elements.x--;
-        }
+        }*/
 
 // TODO: Add movement vfx here
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
@@ -138,19 +167,10 @@ class Platformer extends Phaser.Scene {
             duration: 200,
             lifespan: 100,
             // TODO: Try: gravityY: -400,
-            alpha: {start: 1, end: 0.1}, 
-        });
-
-        my.vfx.pizzaFlip = this.add.particles(0, 0, "food_tilemap_sheet", {
-            frame: ['tile_0105.png', 'tile_0106.png'],
-            // TODO: Try: add random: true
-            scale: {start: 0.03, end: 0.1},
-            // TODO: Try: maxAliveParticles: 8,
-            duration: 200,
-            lifespan: 100,
-            // TODO: Try: gravityY: -400,
-            alpha: {start: 1, end: 0.1}, 
-        });
+            alpha: {start: 1, end: 0.2}, 
+        }); 
+ 
+        
         my.vfx.walking.stop();
         my.vfx.jumping.stop();
         my.vfx.sparkle.stop();
@@ -170,7 +190,7 @@ class Platformer extends Phaser.Scene {
 
         // Enable collision handling
         this.physics.add.collider(my.sprite.player, this.groundLayer);
-        this.physics.add.collider(this.enemyGroup, this.groundLayer);
+        //this.physics.add.collider(this.enemyGroup, this.groundLayer);
 
        
 
@@ -195,6 +215,9 @@ class Platformer extends Phaser.Scene {
             
             my.vfx.sparkle.x = obj2.x;
             my.vfx.sparkle.y = obj2.y;
+             this.sound.play("collection",{
+                volume:.7
+                 });
             my.vfx.sparkle.start();
             this.scene.start("win");
         });
@@ -207,19 +230,48 @@ class Platformer extends Phaser.Scene {
             console.log("Took DAMAGE");
             if(this.currHealthPointSprite){
                  this.currHealthPointSprite.destroy();
-                 this.cameras.main.shake(100,.004);
-                 my.sprite.player.x = this.spawn.x;
-                my.sprite.player.y = this.spawn.y;
+                 this.sound.play("damageSound",{
+                volume:.8 
+                 });
+                 this.cameras.main.shake(100,.008 ); 
+                 my.sprite.player.x = this.spawn.x; 
+                my.sprite.player.y = this.spawn.y; 
                 my.sprite.player.setVelocityX(0);
 
             }
         });
 
-        this.physics.add.overlap(my.sprite.player, this.powerUp, (obj1, obj2) => {
+        this.physics.add.overlap(my.sprite.player, this.dashPowerUp, (obj1, obj2) => {
             obj2.destroy(); // remove coin on overlap
             this.dashActive = true;
             my.vfx.sparkle.x = obj2.x;
             my.vfx.sparkle.y = obj2.y;
+            this.sound.play("collection",{
+                volume:.7
+                 });  
+            my.vfx.sparkle.start();
+        });
+
+        this.physics.add.overlap(my.sprite.player, this.doubleJumpPowerUp, (obj1, obj2) => {
+            obj2.destroy(); // remove coin on overlap
+            this.doubleJumpActive = true;
+
+            my.vfx.sparkle.x = obj2.x;
+            my.vfx.sparkle.y = obj2.y;
+            this.sound.play("collection",{
+                volume:.7
+                 });  
+            my.vfx.sparkle.start();
+        });
+        this.physics.add.overlap(my.sprite.player, this.wallJumpPowerUp, (obj1, obj2) => {
+            obj2.destroy(); // remove coin on overlap
+            this.wallJumpActive = true;
+
+            my.vfx.sparkle.x = obj2.x;
+            my.vfx.sparkle.y = obj2.y;
+            this.sound.play("collection",{
+                volume:.7
+                 });  
             my.vfx.sparkle.start();
         });
 
@@ -232,8 +284,10 @@ class Platformer extends Phaser.Scene {
 
          this.input.keyboard.on('keydown-SPACE', () => {
             if(this.dashActive && this.playerFacedRight){
+                this.dashingState = true;
                 my.sprite.player.setVelocityX(500);
             }else if(this.dashActive){
+                this.dashingState = true;
                 my.sprite.player.setVelocityX(-500);
             }
         }, this);
@@ -253,27 +307,30 @@ class Platformer extends Phaser.Scene {
 
         this.cameras.scoreCam = this.cameras.add();
         this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
-        this.cameras.scoreCam.setPosition(-1070,-425);
+        this.cameras.scoreCam.setPosition(-715,-430);
         this.cameras.scoreCam.setZoom(this.SCALE*1.2);
 
         this.cameras.healthPointsCam = this.cameras.add();
-        this.cameras.healthPointsCam.startFollow(this.healthPoints[0], true, 0.25, 0.25);
+        this.cameras.healthPointsCam.startFollow(this.healthPoints[0], true, 0.25, 0.25) ;
         this.cameras.healthPointsCam.setPosition(500,-400);
         this.cameras.healthPointsCam.setZoom(this.SCALE*2);
 
 
         this.animatedTiles.init(this.map);
+
+        this.anims.play('pizzaFlip',this.collectibles)
+        this.anims.play('beeFly', this.bff);
      
     }
     
     update() {
-        for(let elements of this.enemyList){
+        /*for(let elements of this.enemyList){
             elements.x--;
-        }
+        }*/
         if(this.healthPoints == false){
             this.scene.start("lose");
         }
-        if(cursors.left.isDown) {            
+        if(cursors.left.isDown && this.dashingState == false) {            
             this.playerFacedRight = false;
             my.sprite.player.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
@@ -292,7 +349,7 @@ class Platformer extends Phaser.Scene {
 
             }
 
-        } else if(cursors.right.isDown) {
+        } else if(cursors.right.isDown&& this.dashingState == false) {
             this.playerFacedRight = true;
             my.sprite.player.setAccelerationX(this.ACCELERATION);
             my.sprite.player.resetFlip();
@@ -314,7 +371,7 @@ class Platformer extends Phaser.Scene {
             // Set acceleration to 0 and have DRAG take over
             my.sprite.player.setAccelerationX(0);
             if(this.dashActive){
-                my.sprite.player.setDragX(this.DRAG*2);
+                my.sprite.player.setDragX(this.DRAG);
             }else{
                 my.sprite.player.setDragX(this.DRAG);
 
@@ -329,12 +386,24 @@ class Platformer extends Phaser.Scene {
         if(!my.sprite.player.body.blocked.down) {
             my.sprite.player.anims.play('jump');
         }
-        if(my.sprite.player.body.blocked.down && Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        if((my.sprite.player.body.blocked.down || (this.doubleJumpAvailable >0) || ((my.sprite.player.body.blocked.right || my.sprite.player.body.blocked.left) && this.wallJumpActive)) && Phaser.Input.Keyboard.JustDown(cursors.up)) {
             my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
             my.vfx.jumping.x = my.sprite.player.x;
             my.vfx.jumping.y = my.sprite.player.y;
             my.vfx.jumping.start();
+            if(!my.sprite.player.body.blocked.down && this.doubleJumpActive){
+                this.doubleJumpAvailable = 0;
+            }
         }
+
+        if(my.sprite.player.body.blocked.down && this.doubleJumpActive) {
+            this.doubleJumpAvailable = 1;
+        }
+
+        if(my.sprite.player.body.blocked.down && this.dashActive) {
+            this.dashingState = false;
+        }
+
 
         if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
