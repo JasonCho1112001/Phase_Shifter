@@ -10,25 +10,62 @@ class Platformer extends Phaser.Scene {
 
     init() {
         // variables and settings
-        this.ACCELERATION = 300;
-        this.DRAG = 1200;    // DRAG < ACCELERATION = icy slide
+
+        //Physics + the world --------------------------------------------------------------
         this.physics.world.gravity.y = 1500;
-        this.JUMP_VELOCITY = -600;
-        this.PARTICLE_VELOCITY = 50;
         this.SCALE = 2.35;
+        //Game
         this.playerScore = 0;
 
+        //Basic stats ----------------------------------------------------------------------
         this.healthPoints = [];
 
-        this.dashActive = false;
-        this.dashingState = false;
-
-        this.doubleJumpActive = false;
-        this.wallJumpActive = false;
+        //Basic Movement -------------------------------------------------------------------
+        this.ACCELERATION = 300;
+        this.DRAG = 1200; 
+        this.playerFacedRight = false;
+        //Jumps
+        this.JUMP_VELOCITY = -600;
+        //Double Jump
+        this.doubleJumpActive = false; 
         this.doubleJumpAvailable = 0;
+
+        //Wall Jumps -----------------------------------------------------------------------
+        this.wallJumpActive = false;
         this.wallJumpAvailable = 0;
 
-        this.playerFacedRight = false;
+        //Air Dodge ------------------------------------------------------------------------
+        this.dashActive = false;
+        this.dashingState = false;
+        this.airDodgeDuration = 300; // ms
+        this.airDodgeTimer = 0;
+        this.airDodgeDecayRate = 0.95; // Velocity decay per frame
+        this.airDodgeVector = new Phaser.Math.Vector2(0, 0);
+
+        //Tile Switching -------------------------------------------------------------------
+
+        //Hazards --------------------------------------------------------------------------
+
+        //Particles ------------------------------------------------------------------------
+        this.PARTICLE_VELOCITY = 50;
+
+
+        
+        
+        
+        
+        
+        
+        
+
+        
+
+        
+
+        
+       
+
+        
 
         
     }
@@ -321,6 +358,12 @@ class Platformer extends Phaser.Scene {
         this.anims.play('pizzaFlip',this.collectibles)
         this.anims.play('beeFly', this.bff);
      
+
+        //Jason's working code
+        this.hKey = this.input.keyboard.addKey('H');
+
+        //Other peeps working code (Put your working code here and sort it when stable)
+
     }
     
     update() {
@@ -409,6 +452,49 @@ class Platformer extends Phaser.Scene {
             this.scene.restart();
         }
             
+
+        //Basic Airdodge code
+        // Airdodge in 8 directions
+        if (Phaser.Input.Keyboard.JustDown(this.hKey) && !this.dashingState) {
+            let inputX = 0;
+            let inputY = 0;
+            const speed = 500;
+
+            if (cursors.left.isDown) inputX -= 1;
+            if (cursors.right.isDown) inputX += 1;
+            if (cursors.up.isDown) inputY -= 1;
+            if (cursors.down.isDown) inputY += 1;
+
+            let dir = new Phaser.Math.Vector2(inputX, inputY);
+            if (dir.length() > 0) {
+                dir = dir.normalize().scale(speed);
+                this.airDodgeVector.copy(dir);
+                my.sprite.player.setVelocity(dir.x, dir.y);
+
+                this.dashingState = true;
+                this.airDodgeTimer = this.time.now;
+                my.sprite.player.body.allowGravity = false;
+            }
+        }
+
+        //Handle Dashing state
+        if (this.dashingState) {
+            const elapsed = this.time.now - this.airDodgeTimer;
+            const progress = Phaser.Math.Clamp(elapsed / this.airDodgeDuration, 0, 1);
+
+            // Lerp from initial vector to zero
+            let currentVx = Phaser.Math.Linear(this.airDodgeVector.x, 0, progress);
+            let currentVy = Phaser.Math.Linear(this.airDodgeVector.y, 0, progress);
+            my.sprite.player.setVelocity(currentVx, currentVy);
+
+            if (elapsed >= this.airDodgeDuration) {
+                this.dashingState = false;
+                my.sprite.player.body.allowGravity = true;
+            }
+        }
+
+
+
     }
         
 }
