@@ -14,6 +14,8 @@ class Load extends Phaser.Scene {
         // Load tilemap information
         this.load.image("playerOne","tile_0045.png");
         this.load.image("playerTwo","tile_0046.png");  
+        this.load.image("pizzaBullet","tile_0105.png");  
+
         this.load.audio("collection","confirmation_002.ogg");
         this.load.audio("damageSound","error_007.ogg");
 

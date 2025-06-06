@@ -93,6 +93,36 @@ class Platformer extends Phaser.Scene {
             collides: true
         });
 
+        /////////////////////////////////////
+        this.spawn = this.map.getObjectLayer("Spawns").objects.find((obj) => obj.name === "spawnPoint");
+
+        this.redTiles = this.groundLayer.filterTiles((tile) => {
+                if(tile.properties.vision == "red"){
+                    return true;
+                } else{
+                    return false;
+                }
+        });
+
+        this.blueTiles = this.groundLayer.filterTiles((tile) => {
+                if(tile.properties.vision == "blue"){
+                    return true;
+                } else{
+                    return false;
+                }
+        });
+        for(let elements of this.blueTiles){
+                    elements.tint = 0x4a4a4a;
+                }
+        
+        this.cannonTiles = this.groundLayer.filterTiles((tile) =>{
+            if(tile.properties.isCannon){
+                    return true;
+                } else{
+                    return false;
+                }
+        });
+        /////////////////////////////////////
 
         this.collectibles = this.map.createFromObjects("Collectibles", {
             name: "pizza",
@@ -143,8 +173,6 @@ class Platformer extends Phaser.Scene {
         for(let elements of this.wallJumpPowerUp){
             elements.setTint(0xFFFF00);
         }
-
-        this.spawn = this.map.getObjectLayer("Spawns").objects.find((obj) => obj.name === "spawnPoint");
         
         
         // TODO: Add turn into Arcade Physics here
@@ -164,6 +192,10 @@ class Platformer extends Phaser.Scene {
         // This will be used for collision detection below.
         this.collectibleGroup = this.add.group(this.collectibles);
         this.dangersGroup = this.add.group(this.envDangersList);
+
+        ////Elijah 
+        this.projectileGroup = this.add.group();
+
         /*this.enemyGroup = this.add.group(this.enemyList);
 
         for(let elements of this.enemyList){
@@ -225,11 +257,21 @@ class Platformer extends Phaser.Scene {
         my.sprite.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, "playerOne");
         this.physics.world.setBounds(0,0,120*18,20*18);
          my.sprite.player.setCollideWorldBounds(true);
+        //////////////////////////////
+        let collisionHandler = (obj1,obj2) =>{
 
+         }
+
+         let processHandler = (obj1,obj2) =>{
+            if(obj2.tint == 0x4a4a4a){
+                return false
+            }
+
+            return true
+         }
         // Enable collision handling
-        this.physics.add.collider(my.sprite.player, this.groundLayer);
-        //this.physics.add.collider(this.enemyGroup, this.groundLayer);
-
+        this.physics.add.collider(my.sprite.player, this.groundLayer, collisionHandler, processHandler);
+         ///////////////////////////////////////////////
        
 
         // TODO: Add coin collision handler
@@ -260,6 +302,26 @@ class Platformer extends Phaser.Scene {
             this.scene.start("win");
         });
 
+        //////////////////////////
+        this.physics.add.overlap(my.sprite.player, this.projectileGroup, (obj1,obj2)=>{
+            //this.currHealthPointSprite = this.healthPoints[0];
+            //this.currHealthPointsSprite.destroy();
+            this.currHealthPointSprite = this.healthPoints.pop();
+
+            console.log("Took DAMAGE");
+            if(this.currHealthPointSprite){
+                 this.currHealthPointSprite.destroy();
+                 this.sound.play("damageSound",{
+                volume:.8 
+                 });
+                 this.cameras.main.shake(100,.008 ); 
+                 my.sprite.player.x = this.spawn.x; 
+                my.sprite.player.y = this.spawn.y; 
+                my.sprite.player.setVelocityX(0);
+
+            }
+        });
+        //////////////////////////////
         this.physics.add.overlap(my.sprite.player, this.dangersGroup, (obj1,obj2)=>{
             //this.currHealthPointSprite = this.healthPoints[0];
             //this.currHealthPointsSprite.destroy();
@@ -328,6 +390,26 @@ class Platformer extends Phaser.Scene {
                 this.dashingState = true;
                 my.sprite.player.setVelocityX(-500);
             }
+            ////////////////////////////////
+            if(this.visionState === "red"){
+                this.visionState = "blue";
+                console.log(this.blueTiles)
+                 for(let elements of this.blueTiles){
+                    elements.tint =  0xFFFFF0;
+                }
+                 for(let elements of this.redTiles){
+                    elements.tint = 0x4a4a4a;
+                }
+            }else{
+                 this.visionState = "red";
+                 for(let elements of this.redTiles){
+                    elements.tint =  0xFFFFF0;
+                }
+                 for(let elements of this.blueTiles){
+                    elements.tint = 0x4a4a4a;
+                }
+            }
+            //////////////////////////////////
         }, this);
         // debug key listener (assigned to D key)
         this.input.keyboard.on('keydown-D', () => {
@@ -371,6 +453,17 @@ class Platformer extends Phaser.Scene {
         /*for(let elements of this.enemyList){
             elements.x--;
         }*/
+       /////////////////////////
+       this.ranProjectileFire = Phaser.Math.Between(1,200);
+        this.ranCannonIndex = Phaser.Math.Between(0,1)
+        if(this.ranProjectileFire == 50){
+            //console.log(this.ranCannonIndex);
+            this.projectile = this.physics.add.sprite(this.cannonTiles[this.ranCannonIndex].pixelX,this.cannonTiles[this.ranCannonIndex].pixelY,'pizzaBullet');
+            this.projectileGroup.add(this.projectile);
+            this.projectile.setGravityY(-this.physics.world.gravity.y);
+            this.projectile.setVelocityX(-50);
+        }
+        ////////////////////////
         if(this.healthPoints == false){
             this.scene.start("lose");
         }
