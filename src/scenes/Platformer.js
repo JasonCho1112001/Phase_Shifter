@@ -43,9 +43,10 @@ class Platformer extends Phaser.Scene {
         this.airDodgeVector = new Phaser.Math.Vector2(0, 0);
 
         //Tile Switching -------------------------------------------------------------------
-
+        this.visionState = "red";
         //Hazards --------------------------------------------------------------------------
-
+        this.ranProjectileFire;
+        this.ranCannonIndex;
         //Particles ------------------------------------------------------------------------
         this.PARTICLE_VELOCITY = 50;
 
