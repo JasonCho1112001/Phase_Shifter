@@ -13,7 +13,7 @@ class Platformer extends Phaser.Scene {
 
         //Physics + the world --------------------------------------------------------------
         this.physics.world.gravity.y = 1500;
-        this.SCALE = 2.35;
+        this.SCALE = 3.5;
         //Game
         this.playerScore = 0;
 
@@ -21,11 +21,12 @@ class Platformer extends Phaser.Scene {
         this.healthPoints = [];
 
         //Basic Movement -------------------------------------------------------------------
-        this.ACCELERATION = 300;
+        this.ACCELERATION = 1000;
         this.DRAG = 1200; 
         this.playerFacedRight = false;
+        this.MAX_SPEED = 300;
         //Jumps
-        this.JUMP_VELOCITY = -600;
+        this.JUMP_VELOCITY = -500;
         //Double Jump
         this.doubleJumpActive = false; 
         this.doubleJumpAvailable = 0;
@@ -255,8 +256,9 @@ class Platformer extends Phaser.Scene {
 
     
         my.sprite.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, "playerOne");
-        this.physics.world.setBounds(0,0,120*18,20*18);
-         my.sprite.player.setCollideWorldBounds(true);
+        //this.physics.world.setBounds(0,0,120*18,20*18);
+        //my.sprite.player.setCollideWorldBounds(true);
+        my.sprite.player.setScale(this.SCALE * 0.5);
         //////////////////////////////
         let collisionHandler = (obj1,obj2) =>{
 
@@ -305,7 +307,7 @@ class Platformer extends Phaser.Scene {
         //////////////////////////
         this.physics.add.overlap(my.sprite.player, this.projectileGroup, (obj1,obj2)=>{
             //this.currHealthPointSprite = this.healthPoints[0];
-            //this.currHealthPointsSprite.destroy();
+            //this.currHealthPointsSprite.destroy();    
             this.currHealthPointSprite = this.healthPoints.pop();
 
             console.log("Took DAMAGE");
@@ -380,6 +382,12 @@ class Platformer extends Phaser.Scene {
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
         this.rKey = this.input.keyboard.addKey('R');
+        //Additional Input (Add input keys)
+        this.aKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A);
+        this.dKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D);
+        this.wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
+        this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
+        this.jKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
 
 
          this.input.keyboard.on('keydown-SPACE', () => {
@@ -391,39 +399,22 @@ class Platformer extends Phaser.Scene {
                 my.sprite.player.setVelocityX(-500);
             }
             ////////////////////////////////
-            if(this.visionState === "red"){
-                this.visionState = "blue";
-                console.log(this.blueTiles)
-                 for(let elements of this.blueTiles){
-                    elements.tint =  0xFFFFF0;
-                }
-                 for(let elements of this.redTiles){
-                    elements.tint = 0x4a4a4a;
-                }
-            }else{
-                 this.visionState = "red";
-                 for(let elements of this.redTiles){
-                    elements.tint =  0xFFFFF0;
-                }
-                 for(let elements of this.blueTiles){
-                    elements.tint = 0x4a4a4a;
-                }
-            }
+            this.SwitchVision();
             //////////////////////////////////
         }, this);
         // debug key listener (assigned to D key)
-        this.input.keyboard.on('keydown-D', () => {
+        this.input.keyboard.on('keydown-L', () => {
             this.physics.world.drawDebug = this.physics.world.drawDebug ? false : true
             this.physics.world.debugGraphic.clear()
         }, this);
-
+        this.physics.world.drawDebug = false;
         
 
         // TODO: add camera code here
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels+120, this.map.heightInPixels);  
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
         this.cameras.main.setDeadzone(50, 50);
-        this.cameras.main.setZoom(this.SCALE);
+        this.cameras.main.setZoom(this.SCALE * 0.6);
 
         this.cameras.scoreCam = this.cameras.add();
         this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
@@ -454,20 +445,20 @@ class Platformer extends Phaser.Scene {
             elements.x--;
         }*/
        /////////////////////////
-       this.ranProjectileFire = Phaser.Math.Between(1,200);
-        this.ranCannonIndex = Phaser.Math.Between(0,1)
-        if(this.ranProjectileFire == 50){
-            //console.log(this.ranCannonIndex);
-            this.projectile = this.physics.add.sprite(this.cannonTiles[this.ranCannonIndex].pixelX,this.cannonTiles[this.ranCannonIndex].pixelY,'pizzaBullet');
-            this.projectileGroup.add(this.projectile);
-            this.projectile.setGravityY(-this.physics.world.gravity.y);
-            this.projectile.setVelocityX(-50);
-        }
+    //    this.ranProjectileFire = Phaser.Math.Between(1,200);
+    //     this.ranCannonIndex = Phaser.Math.Between(0,1)
+    //     if(this.ranProjectileFire == 50 && pixelX != null){
+    //         //console.log(this.ranCannonIndex);
+    //         this.projectile = this.physics.add.sprite(this.cannonTiles[this.ranCannonIndex].pixelX,this.cannonTiles[this.ranCannonIndex].pixelY,'pizzaBullet');
+    //         this.projectileGroup.add(this.projectile);
+    //         this.projectile.setGravityY(-this.physics.world.gravity.y);
+    //         this.projectile.setVelocityX(-50);
+    //     }
         ////////////////////////
         if(this.healthPoints == false){
             this.scene.start("lose");
         }
-        if(cursors.left.isDown && this.dashingState == false) {            
+        if((cursors.left.isDown || this.aKey.isDown) && this.dashingState == false) {            
             this.playerFacedRight = false;
             my.sprite.player.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
@@ -486,7 +477,7 @@ class Platformer extends Phaser.Scene {
 
             }
 
-        } else if(cursors.right.isDown&& this.dashingState == false) {
+        } else if((this.dKey.isDown || cursors.right.isDown) && this.dashingState == false) {
             this.playerFacedRight = true;
             my.sprite.player.setAccelerationX(this.ACCELERATION);
             my.sprite.player.resetFlip();
@@ -518,12 +509,15 @@ class Platformer extends Phaser.Scene {
             my.vfx.walking.stop();
         }
 
+        //Speed cap
+        my.sprite.player.body.velocity.x = Phaser.Math.Clamp(my.sprite.player.body.velocity.x, -this.MAX_SPEED, this.MAX_SPEED);
+
         // player jump
         // note that we need body.blocked rather than body.touching b/c the former applies to tilemap tiles and the latter to the "ground"
         if(!my.sprite.player.body.blocked.down) {
             my.sprite.player.anims.play('jump');
         }
-        if((my.sprite.player.body.blocked.down || (this.doubleJumpAvailable >0) || ((my.sprite.player.body.blocked.right || my.sprite.player.body.blocked.left) && this.wallJumpActive)) && Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        if((my.sprite.player.body.blocked.down || (this.doubleJumpAvailable >0) || ((my.sprite.player.body.blocked.right || my.sprite.player.body.blocked.left) && this.wallJumpActive)) && (Phaser.Input.Keyboard.JustDown(cursors.up) || this.jKey.isDown)) {
             my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
             my.vfx.jumping.x = my.sprite.player.x;
             my.vfx.jumping.y = my.sprite.player.y;
@@ -554,22 +548,31 @@ class Platformer extends Phaser.Scene {
             let inputY = 0;
             const speed = 500;
 
-            if (cursors.left.isDown) inputX -= 1;
-            if (cursors.right.isDown) inputX += 1;
-            if (cursors.up.isDown) inputY -= 1;
-            if (cursors.down.isDown) inputY += 1;
+            if (cursors.left.isDown || this.aKey.isDown) inputX -= 1;
+            if (cursors.right.isDown || this.dKey.isDown) inputX += 1;
+            if (cursors.up.isDown || this.wKey.isDown) inputY -= 1;
+            if (cursors.down.isDown || this.sKey.isDown) inputY += 1;
 
             let dir = new Phaser.Math.Vector2(inputX, inputY);
-            if (dir.length() > 0) {
-                dir = dir.normalize().scale(speed);
-                this.airDodgeVector.copy(dir);
-                my.sprite.player.setVelocity(dir.x, dir.y);
 
-                this.dashingState = true;
-                this.airDodgeTimer = this.time.now;
-                my.sprite.player.body.allowGravity = false;
+            // If no directional input, default to facing direction
+            if (dir.length() === 0) {
+                dir.x = this.playerFacedRight ? 1 : -1;
+                dir.y = 0;
             }
+
+            dir = dir.normalize().scale(speed);
+            this.airDodgeVector.copy(dir);
+            my.sprite.player.setVelocity(dir.x, dir.y);
+
+            this.dashingState = true;
+            this.airDodgeTimer = this.time.now;
+            my.sprite.player.body.allowGravity = false;
+
+            // Switch vision when dodging
+            this.SwitchVision();
         }
+
 
         //Handle Dashing state
         if (this.dashingState) {
@@ -587,8 +590,28 @@ class Platformer extends Phaser.Scene {
             }
         }
 
+    }
 
-
+    SwitchVision()
+    {
+        if(this.visionState === "red"){
+                this.visionState = "blue";
+                console.log(this.blueTiles)
+                 for(let elements of this.blueTiles){
+                    elements.tint =  0xFFFFF0;
+                }
+                 for(let elements of this.redTiles){
+                    elements.tint = 0x4a4a4a;
+                }
+            }else{
+                 this.visionState = "red";
+                 for(let elements of this.redTiles){
+                    elements.tint =  0xFFFFF0;
+                }
+                 for(let elements of this.blueTiles){
+                    elements.tint = 0x4a4a4a;
+                }
+            }
     }
         
 }
