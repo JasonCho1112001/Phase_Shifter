@@ -13,7 +13,7 @@ class Platformer extends Phaser.Scene {
 
         //Physics + the world --------------------------------------------------------------
         this.physics.world.gravity.y = 1500;
-        this.SCALE = 3.5;
+        this.SCALE = 1.75;
         //Game
         this.playerScore = 0;
 
@@ -21,12 +21,15 @@ class Platformer extends Phaser.Scene {
         this.healthPoints = [];
 
         //Basic Movement -------------------------------------------------------------------
-        this.ACCELERATION = 1000;
-        this.DRAG = 1200; 
+        this.ACCELERATION = 1400;
+        this.DRAG = 1400; 
         this.playerFacedRight = false;
-        this.MAX_SPEED = 300;
+        this.MAX_SPEED = 250;
         //Jumps
         this.JUMP_VELOCITY = -500;
+        this.isJumping = false;
+        this.jumpTimer = 0;
+        this.MIN_JUMP_TIME = 50; // in milliseconds
         //Double Jump
         this.doubleJumpActive = false; 
         this.doubleJumpAvailable = 0;
@@ -35,9 +38,18 @@ class Platformer extends Phaser.Scene {
         this.wallJumpActive = false;
         this.wallJumpAvailable = 0;
 
+        //Wall Slide + Jump Stuff
+        this.WALL_SLIDE_SPEED = 100;  // max slide speed when against wall
+        this.WALL_JUMP_X = 900;   // Horizontal velocity away from the wall
+        this.WALL_JUMP_Y = -500;  // Vertical jump strength from wall
+        this.isWallJumpLocked = false;
+        this.wallJumpLockoutTimer = 0;
+        this.WALLJUMP_LOCKOUT_DURATION = 300; // milliseconds
+
         //Air Dodge ------------------------------------------------------------------------
         this.dashActive = false;
         this.dashingState = false;
+        this.airDodgeSpeed = 550;
         this.airDodgeDuration = 300; // ms
         this.airDodgeTimer = 0;
         this.airDodgeDecayRate = 0.95; // Velocity decay per frame
@@ -50,7 +62,13 @@ class Platformer extends Phaser.Scene {
         this.ranCannonIndex;
         //Particles ------------------------------------------------------------------------
         this.PARTICLE_VELOCITY = 50;
-
+        //Camera ---------------------------------------------------------------------------
+        this.LOOKAHEAD = 100; // how far ahead the camera looks based on movement direction
+        this.CAMERA_LERP = 0.05; // smoothness factor (0 = no follow, 1 = instant snap)
+        this.currentLookahead = 0;
+        this.lookaheadTarget = 0;
+        this.LOOKAHEAD_THRESHOLD = 250;  // Minimum horizontal speed before lookahead activates
+        this.LOOKAHEAD_DELAY = 400; 
 
         
         
@@ -258,7 +276,7 @@ class Platformer extends Phaser.Scene {
         my.sprite.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, "playerOne");
         //this.physics.world.setBounds(0,0,120*18,20*18);
         //my.sprite.player.setCollideWorldBounds(true);
-        my.sprite.player.setScale(this.SCALE * 0.5);
+        my.sprite.player.setScale(this.SCALE);
         //////////////////////////////
         let collisionHandler = (obj1,obj2) =>{
 
@@ -414,7 +432,7 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels+120, this.map.heightInPixels);  
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
         this.cameras.main.setDeadzone(50, 50);
-        this.cameras.main.setZoom(this.SCALE * 0.6);
+        this.cameras.main.setZoom(this.SCALE * 1.25);
 
         this.cameras.scoreCam = this.cameras.add();
         this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
@@ -458,59 +476,106 @@ class Platformer extends Phaser.Scene {
         if(this.healthPoints == false){
             this.scene.start("lose");
         }
-        if((cursors.left.isDown || this.aKey.isDown) && this.dashingState == false) {            
-            this.playerFacedRight = false;
-            my.sprite.player.setAccelerationX(-this.ACCELERATION);
-            my.sprite.player.setFlip(true, false);
-            my.sprite.player.anims.play('walk', true);
-            // TODO: add particle following code here
-            my.vfx.walking.startFollow(my.sprite.player, (my.sprite.player.displayWidth/2)+10, my.sprite.player.displayHeight/2-5, false);
-            my.vfx.walking.particleRotate = 90;
 
-            my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
-
-            // Only play smoke effect if touching the ground
-
-            if (my.sprite.player.body.blocked.down) {
-
-                my.vfx.walking.start();
-
+        //Movement
+        //Prevent movement during specific states
+        if(!this.dashingState) {
+            //Wall jump locked movement
+            if (this.isWallJumpLocked) {
+                // Force max horizontal velocity in facing direction
+                const velX = this.playerFacedRight ? this.MAX_SPEED : -this.MAX_SPEED;
+                my.sprite.player.setVelocityX(velX);
+                my.sprite.player.setAccelerationX(0); // ensure no extra acceleration is applied
             }
+            //Detect Input
+            else { 
+                if ((cursors.left.isDown || this.aKey.isDown)) {            
+                    this.playerFacedRight = false;
+                    my.sprite.player.setAccelerationX(-this.ACCELERATION);
+                    my.sprite.player.setFlip(true, false);
+                    my.sprite.player.anims.play('walk', true);
+                    // TODO: add particle following code here
+                    my.vfx.walking.startFollow(my.sprite.player, (my.sprite.player.displayWidth/2)+10, my.sprite.player.displayHeight/2-5, false);
+                    my.vfx.walking.particleRotate = 90;
 
-        } else if((this.dKey.isDown || cursors.right.isDown) && this.dashingState == false) {
-            this.playerFacedRight = true;
-            my.sprite.player.setAccelerationX(this.ACCELERATION);
-            my.sprite.player.resetFlip();
-            my.sprite.player.anims.play('walk', true);
-            // TODO: add particle following code here
-            my.vfx.walking.startFollow(my.sprite.player, (my.sprite.player.displayWidth/2)-25, my.sprite.player.displayHeight/2-5, false);
-            my.vfx.walking.particleRotate = -90;
-            my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
+                    my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
 
-            // Only play smoke effect if touching the ground
+                    // Only play smoke effect if touching the ground
 
-            if (my.sprite.player.body.blocked.down) {
+                    if (my.sprite.player.body.blocked.down) {
 
-                my.vfx.walking.start();
+                        my.vfx.walking.start();
 
+                    }
+
+                } else if((this.dKey.isDown || cursors.right.isDown)) {
+                    this.playerFacedRight = true;
+                    my.sprite.player.setAccelerationX(this.ACCELERATION);
+                    my.sprite.player.resetFlip();
+                    my.sprite.player.anims.play('walk', true);
+                    // TODO: add particle following code here
+                    my.vfx.walking.startFollow(my.sprite.player, (my.sprite.player.displayWidth/2)-25, my.sprite.player.displayHeight/2-5, false);
+                    my.vfx.walking.particleRotate = -90;
+                    my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
+
+                    // Only play smoke effect if touching the ground
+
+                    if (my.sprite.player.body.blocked.down) {
+
+                        my.vfx.walking.start();
+
+                    }
+
+                } else {
+                    // Set acceleration to 0 and have DRAG take over
+                    my.sprite.player.setAccelerationX(0);
+                    if(this.dashActive){
+                        my.sprite.player.setDragX(this.DRAG);
+                    }else{
+                        my.sprite.player.setDragX(this.DRAG);
+
+                    }
+                    my.sprite.player.anims.play('idle');
+                    // TODO: have the vfx stop playing
+                    my.vfx.walking.stop();
+                }
             }
-
-        } else {
-            // Set acceleration to 0 and have DRAG take over
-            my.sprite.player.setAccelerationX(0);
-            if(this.dashActive){
-                my.sprite.player.setDragX(this.DRAG);
-            }else{
-                my.sprite.player.setDragX(this.DRAG);
-
-            }
-            my.sprite.player.anims.play('idle');
-            // TODO: have the vfx stop playing
-            my.vfx.walking.stop();
         }
-
         //Speed cap
         my.sprite.player.body.velocity.x = Phaser.Math.Clamp(my.sprite.player.body.velocity.x, -this.MAX_SPEED, this.MAX_SPEED);
+
+        //Wall Slide Stuff
+        let touchingLeftWall = my.sprite.player.body.blocked.left;
+        let touchingRightWall = my.sprite.player.body.blocked.right;
+        let falling = my.sprite.player.body.velocity.y > 0;
+        let inAir = !my.sprite.player.body.blocked.down;
+
+        let pressingLeft = cursors.left.isDown || this.aKey.isDown;
+        let pressingRight = cursors.right.isDown || this.dKey.isDown;
+
+        let isWallSliding = inAir && falling && (
+            (touchingLeftWall && pressingLeft) || 
+            (touchingRightWall && pressingRight)
+        );
+
+        // Wall slide condition
+        if (inAir && falling) {
+            if ((touchingLeftWall && pressingLeft) || (touchingRightWall && pressingRight)) {
+                // Clamp fall speed
+                my.sprite.player.body.setVelocityY(Math.min(my.sprite.player.body.velocity.y, this.WALL_SLIDE_SPEED));
+                // Make player sprite funny
+                my.sprite.player.setScale(this.SCALE * 0.8, this.SCALE);
+                // Start wall sliding vfx
+                //my.vfx.walls.startFollow(my.sprite.player, my.sprite.player.displayWidth / 2 - 20, my.sprite.player.displayHeight / 2, false);
+                //my.vfx.walls.setParticleSpeed(0, this.PARTICLE_VELOCITY);  // falling smoke
+               // my.vfx.walls.start();
+            } else { /*my.vfx.walls.stop(); */}
+        } else {
+            //Revert the funny
+            my.sprite.player.setScale(this.SCALE, this.SCALE);
+            //Stop vfx
+            //my.vfx.walls.stop();
+        }
 
         // player jump
         // note that we need body.blocked rather than body.touching b/c the former applies to tilemap tiles and the latter to the "ground"
@@ -522,11 +587,69 @@ class Platformer extends Phaser.Scene {
             my.vfx.jumping.x = my.sprite.player.x;
             my.vfx.jumping.y = my.sprite.player.y;
             my.vfx.jumping.start();
+            
+            //Variable Jump
+            this.isJumping = true;
+            this.jumpTimer = 0;
+
+            //Double Jump
             if(!my.sprite.player.body.blocked.down && this.doubleJumpActive){
                 this.doubleJumpAvailable = 0;
             }
         }
+        //Detect for wall jump
+        if (isWallSliding && (Phaser.Input.Keyboard.JustDown(cursors.up) || Phaser.Input.Keyboard.JustDown(this.jKey))) {
+            if (touchingLeftWall) {
+                this.playerFacedRight = true;
+                my.sprite.player.resetFlip();
+                my.sprite.player.setVelocityX(this.WALL_JUMP_X);  // Jump to the right
+            } else if (touchingRightWall) {
+                this.playerFacedRight = false;
+                my.sprite.player.setFlip(true, false);
+                my.sprite.player.setVelocityX(-this.WALL_JUMP_X); // Jump to the left
+            }
 
+            my.sprite.player.setVelocityY(this.WALL_JUMP_Y); // Jump upward
+            this.isJumping = true;
+            this.jumpTimer = 0;
+
+            // Lock out directional movement
+            this.isWallJumpLocked = true;
+            this.wallJumpLockoutTimer = this.time.now;
+
+            // Start jump vfx
+            //my.vfx.jump.explode();
+            //Audio
+            //this.jumpSfx.play();
+        }
+        //Handle end of wallJumpLocked
+        if (this.isWallJumpLocked) {
+            if (this.time.now - this.wallJumpLockoutTimer > this.WALLJUMP_LOCKOUT_DURATION) {
+                this.isWallJumpLocked = false;
+            } else {
+                // During lockout, prevent unintended drift
+                my.sprite.player.setAccelerationX(0);
+            }
+        }
+        // Variable jump handling
+        if (this.isJumping) {
+            this.jumpTimer += this.game.loop.delta;
+
+            // Player releases jump after MIN_JUMP_TIME while still ascending
+            if (
+                !(cursors.up.isDown || this.jKey.isDown) &&
+                my.sprite.player.body.velocity.y < 0 &&
+                this.jumpTimer >= this.MIN_JUMP_TIME
+            ) {
+                my.sprite.player.body.setVelocityY(my.sprite.player.body.velocity.y * 0.5); // cut jump
+                this.isJumping = false;
+            }
+
+            // End jump early if player stops ascending or hits ceiling
+            if (my.sprite.player.body.velocity.y >= 0 || my.sprite.player.body.blocked.up) {
+                this.isJumping = false;
+            }
+        }
         if(my.sprite.player.body.blocked.down && this.doubleJumpActive) {
             this.doubleJumpAvailable = 1;
         }
@@ -535,7 +658,10 @@ class Platformer extends Phaser.Scene {
             this.dashingState = false;
         }
 
+        
 
+
+        //Restart
         if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
         }
@@ -544,9 +670,9 @@ class Platformer extends Phaser.Scene {
         //Basic Airdodge code
         // Airdodge in 8 directions
         if (Phaser.Input.Keyboard.JustDown(this.hKey) && !this.dashingState) {
-            let inputX = 0;
+            let inputX = 0; 
             let inputY = 0;
-            const speed = 500;
+            const speed = this.airDodgeSpeed;
 
             if (cursors.left.isDown || this.aKey.isDown) inputX -= 1;
             if (cursors.right.isDown || this.dKey.isDown) inputX += 1;
@@ -589,6 +715,8 @@ class Platformer extends Phaser.Scene {
                 my.sprite.player.body.allowGravity = true;
             }
         }
+
+        
 
     }
 
