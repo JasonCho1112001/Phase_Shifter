@@ -432,7 +432,7 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels+120, this.map.heightInPixels);  
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
         this.cameras.main.setDeadzone(50, 50);
-        this.cameras.main.setZoom(this.SCALE * 1.1);
+        this.cameras.main.setZoom(this.SCALE * 1.25);
 
         this.cameras.scoreCam = this.cameras.add();
         this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
@@ -455,7 +455,40 @@ class Platformer extends Phaser.Scene {
         this.hKey = this.input.keyboard.addKey('H');
 
         //Other peeps working code (Put your working code here and sort it when stable)
+        //Gas implementation
+        this.gas = this.physics.add.sprite(my.sprite.player.x - 1100, 0, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
+        this.gas.setOrigin(0,0); //setting the hurtbox
+        this.gas.setAlpha(1); //making the 'gas' png more transparent
+        this.gas.setImmovable(true);
+        this.gas.setTint(0xffff00); //sets color to green from the default grey from the flame png
+        this.gas.body.setAllowGravity(false);
+        this.gas.displayHeight = this.scale.height * 2;
+        this.gas.y = 0;
+        this.gas.body.setSize(this.gas.displayWidth - 130, this.gas.displayHeight - 130); //without minuses, the player would get hit by hitbox before the visual smoke sprite 
 
+        this.gas.setVelocityX(30);
+
+        //contact check, did the player get hit by the gas
+        this.physics.add.overlap(my.sprite.player, this.gas, () => {
+
+            this.scene.start("lose");
+        });
+
+        /* vertical gas implementation using tile spawn points, commented it out so that we can decide where to put these on the levels
+        let gasSpawn = this.map.getObjectLayer("Spawns").objects.find(o => o.name === "verticalGasStart");
+        this.gasVertical = this.physics.add.sprite(gasSpawn.x, gasSpawn.y, "kenny-particles", "flame_04.png");
+        this.gasVertical.setOrigin(0, 0);
+        this.gasVertical.setAlpha(1);
+        this.gasVertical.setImmovable(true);
+        this.gasVertical.setTint(0xffff00);
+        this.gasVertical.body.setAllowGravity(false);
+        this.gasVertical.displayHeight = 100;   //not tested, mess around with the number so it looks better for the levels
+        this.gasVertical.displayWidth = 100;    //not tested, mess around with the number so it looks better
+        this.gasVertical.body.setSize(this.gas.displayHeight, this.gas.displayWidth);   //same as above
+        this.physics.add.overlap(my.sprite.player, this.gasVertical, () => {
+            this.scene.start("lose");
+        })
+        */
     }
     
     update() {
@@ -473,10 +506,24 @@ class Platformer extends Phaser.Scene {
     //         this.projectile.setVelocityX(-50);
     //     }
         ////////////////////////
+        
+        //gas movement
+        if (this.gas.x > this.map.widthInPixels + 100) {
+
+            this.gas.x = -this.gas.width;
+        }
+        
+        /*
+        //vertical gas movement
+        if (this.gasVertical.y + this.gasVertical.displayHeight < 0) {
+
+            this.gasVertical.y = this.map.heightInPixels + 100;
+        }
+        */
+
         if(this.healthPoints == false){
             this.scene.start("lose");
         }
-
         //Movement
         //Prevent movement during specific states
         if(!this.dashingState) {
