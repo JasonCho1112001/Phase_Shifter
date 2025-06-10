@@ -463,25 +463,32 @@ class Platformer extends Phaser.Scene {
         //Jason's working code
         this.hKey = this.input.keyboard.addKey('H');
 
+        /* 
+
         //Other peeps working code (Put your working code here and sort it when stable)
-        //Gas implementation
-        // this.gas = this.physics.add.sprite(my.sprite.player.x - 1000, my.sprite.player.y + 50, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
-        // this.gas.setOrigin(0,0); //setting the hurtbox
-        // this.gas.setAlpha(1); //making the 'gas' png more transparent
-        // this.gas.setImmovable(true);
-        // this.gas.setTint(0xffff00); //sets color to green from the default grey from the flame png
-        // this.gas.body.setAllowGravity(false);
-        // this.gas.displayHeight = this.scale.height * 40;
-        // this.gas.y = my.sprite.player.y + 50;
-        // this.gas.body.setSize(this.gas.displayWidth - 130, this.gas.displayHeight - 130); //without minuses, the player would get hit by hitbox before the visual smoke sprite 
-        
-        // this.gas.setVelocityX(100);
+        //Gas implementation [Debugged]
+        this.gas = this.physics.add.sprite(my.sprite.player.x - 800, my.sprite.player.y, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
+        this.gas.setAlpha(1); //making the 'gas' png more transparent
+        this.gas.setImmovable(true);
+        this.children.bringToTop(this.gas);
+        this.gas.setTint(0xffff00); //sets color to green from the default grey from the flame png
+        this.gas.body.setAllowGravity(false);
+        this.gas.displayHeight = this.scale.height * 2;
+        this.gas.displayWidth = 500;
+        this.gas.body.setSize(this.gas.displayWidth - 100, this.gas.displayHeight - 800); //without minus 130, the player would get hit by hitbox before the visual smoke sprite 
+
+        this.gas.setVelocityX(90);
+
+
 
         // //contact check, did the player get hit by the gas
         // this.physics.add.overlap(my.sprite.player, this.gas, () => {
 
         //     this.scene.start("lose");
         // });
+
+        */
+
 
         /* vertical gas implementation using tile spawn points, commented it out so that we can decide where to put these on the levels
         let gasSpawn = this.map.getObjectLayer("Spawns").objects.find(o => o.name === "verticalGasStart");
