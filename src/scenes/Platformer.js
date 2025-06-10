@@ -58,7 +58,7 @@ class Platformer extends Phaser.Scene {
         this.intangible = false;
 
         //Tile Switching -------------------------------------------------------------------
-        this.visionState = "red";
+        this.visionState = "red";   
         //Hazards --------------------------------------------------------------------------
         this.ranProjectileFire;
         this.ranCannonIndex;
@@ -326,21 +326,28 @@ class Platformer extends Phaser.Scene {
 
         //////////////////////////
         this.physics.add.overlap(my.sprite.player, this.projectileGroup, (obj1,obj2)=>{
-            //this.currHealthPointSprite = this.healthPoints[0];
-            //this.currHealthPointsSprite.destroy();    
-            this.currHealthPointSprite = this.healthPoints.pop();
+            //Check if player is intangible
+            if(!this.intangible) {
+                //this.currHealthPointSprite = this.healthPoints[0];
+                //this.currHealthPointsSprite.destroy();    
+                this.currHealthPointSprite = this.healthPoints.pop();
 
-            console.log("Took DAMAGE");
-            if(this.currHealthPointSprite){
-                 this.currHealthPointSprite.destroy();
-                 this.sound.play("damageSound",{
-                volume:.8 
-                 });
-                 this.cameras.main.shake(100,.008 ); 
-                 my.sprite.player.x = this.spawn.x; 
-                my.sprite.player.y = this.spawn.y; 
-                my.sprite.player.setVelocityX(0);
+                console.log("Took DAMAGE");
+                if(this.currHealthPointSprite){
+                    this.currHealthPointSprite.destroy();
+                    this.sound.play("damageSound",{
+                    volume:.8 
+                    });
+                    this.cameras.main.shake(100,.008 ); 
+                    my.sprite.player.x = this.spawn.x; 
+                    my.sprite.player.y = this.spawn.y; 
+                    my.sprite.player.setVelocityX(0);
 
+                }
+            }
+            else {
+                //If they are, give the airdodge back
+                this.canAirDodge = true;
             }
         });
         //////////////////////////////
@@ -434,7 +441,7 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels+120, this.map.heightInPixels);  
         this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
         this.cameras.main.setDeadzone(50, 50);
-        this.cameras.main.setZoom(this.SCALE * 1.1);
+        this.cameras.main.setZoom(this.SCALE * 1.1 /*1.1*/);
 
         this.cameras.scoreCam = this.cameras.add();
         this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
@@ -458,23 +465,23 @@ class Platformer extends Phaser.Scene {
 
         //Other peeps working code (Put your working code here and sort it when stable)
         //Gas implementation
-        this.gas = this.physics.add.sprite(my.sprite.player.x - 1100, 0, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
-        this.gas.setOrigin(0,0); //setting the hurtbox
-        this.gas.setAlpha(1); //making the 'gas' png more transparent
-        this.gas.setImmovable(true);
-        this.gas.setTint(0xffff00); //sets color to green from the default grey from the flame png
-        this.gas.body.setAllowGravity(false);
-        this.gas.displayHeight = this.scale.height * 2;
-        this.gas.y = 0;
-        this.gas.body.setSize(this.gas.displayWidth - 130, this.gas.displayHeight - 130); //without minuses, the player would get hit by hitbox before the visual smoke sprite 
+        // this.gas = this.physics.add.sprite(my.sprite.player.x - 1000, my.sprite.player.y + 50, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
+        // this.gas.setOrigin(0,0); //setting the hurtbox
+        // this.gas.setAlpha(1); //making the 'gas' png more transparent
+        // this.gas.setImmovable(true);
+        // this.gas.setTint(0xffff00); //sets color to green from the default grey from the flame png
+        // this.gas.body.setAllowGravity(false);
+        // this.gas.displayHeight = this.scale.height * 40;
+        // this.gas.y = my.sprite.player.y + 50;
+        // this.gas.body.setSize(this.gas.displayWidth - 130, this.gas.displayHeight - 130); //without minuses, the player would get hit by hitbox before the visual smoke sprite 
+        
+        // this.gas.setVelocityX(100);
 
-        this.gas.setVelocityX(30);
+        // //contact check, did the player get hit by the gas
+        // this.physics.add.overlap(my.sprite.player, this.gas, () => {
 
-        //contact check, did the player get hit by the gas
-        this.physics.add.overlap(my.sprite.player, this.gas, () => {
-
-            this.scene.start("lose");
-        });
+        //     this.scene.start("lose");
+        // });
 
         /* vertical gas implementation using tile spawn points, commented it out so that we can decide where to put these on the levels
         let gasSpawn = this.map.getObjectLayer("Spawns").objects.find(o => o.name === "verticalGasStart");
@@ -491,6 +498,28 @@ class Platformer extends Phaser.Scene {
             this.scene.start("lose");
         })
         */
+
+        //New cannon code
+        this.time.addEvent({
+            delay: 2000, // Fire every second
+            loop: true,
+            callback: () => {
+                for (let i = 0; i < this.cannonTiles.length; i++) {
+                    let spawnX = this.cannonTiles[i].pixelX;
+                    let spawnY = this.cannonTiles[i].pixelY;
+
+                    let projectile = this.physics.add.sprite(spawnX, spawnY + 9, 'pizzaBullet');
+                    this.projectileGroup.add(projectile);
+                    projectile.setGravityY(-this.physics.world.gravity.y);
+                    projectile.setVelocityX(-150); // Change as needed per cannon direction
+                }
+            }
+        });
+
+        // Destroy projectiles that hit a tile marked with "collides: true"
+        this.physics.add.collider(this.projectileGroup, this.groundLayer, (projectile, tile) => {
+            projectile.destroy();
+        });
     }
     
     update() {
@@ -498,22 +527,14 @@ class Platformer extends Phaser.Scene {
             elements.x--;
         }*/
        /////////////////////////
-    //    this.ranProjectileFire = Phaser.Math.Between(1,200);
-    //     this.ranCannonIndex = Phaser.Math.Between(0,1)
-    //     if(this.ranProjectileFire == 50 && pixelX != null){
-    //         //console.log(this.ranCannonIndex);
-    //         this.projectile = this.physics.add.sprite(this.cannonTiles[this.ranCannonIndex].pixelX,this.cannonTiles[this.ranCannonIndex].pixelY,'pizzaBullet');
-    //         this.projectileGroup.add(this.projectile);
-    //         this.projectile.setGravityY(-this.physics.world.gravity.y);
-    //         this.projectile.setVelocityX(-50);
-    //     }
+       
         ////////////////////////
         
         //gas movement
-        if (this.gas.x > this.map.widthInPixels + 100) {
+        // if (this.gas.x > this.map.widthInPixels + 100) {
 
-            this.gas.x = -this.gas.width;
-        }
+        //     this.gas.x = -this.gas.width;
+        // }
         
         /*
         //vertical gas movement
@@ -725,6 +746,7 @@ class Platformer extends Phaser.Scene {
             let inputX = 0; 
             let inputY = 0;
             const speed = this.airDodgeSpeed;
+            this.intangible = true;
 
             if (cursors.left.isDown || this.aKey.isDown) inputX -= 1;
             if (cursors.right.isDown || this.dKey.isDown) inputX += 1;
@@ -765,6 +787,7 @@ class Platformer extends Phaser.Scene {
             if (elapsed >= this.airDodgeDuration) {
                 this.dashingState = false;
                 my.sprite.player.body.allowGravity = true;
+                this.intangible = true;
             }
         }
 
