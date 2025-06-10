@@ -54,6 +54,8 @@ class Platformer extends Phaser.Scene {
         this.airDodgeTimer = 0;
         this.airDodgeDecayRate = 0.95; // Velocity decay per frame
         this.airDodgeVector = new Phaser.Math.Vector2(0, 0);
+        this.canAirDodge = true;
+        this.intangible = false;
 
         //Tile Switching -------------------------------------------------------------------
         this.visionState = "red";
@@ -360,7 +362,7 @@ class Platformer extends Phaser.Scene {
 
             }
         });
-        
+
         this.physics.add.overlap(my.sprite.player, this.dashPowerUp, (obj1, obj2) => {
             obj2.destroy(); // remove coin on overlap
             this.dashActive = true;
@@ -647,10 +649,12 @@ class Platformer extends Phaser.Scene {
         //Detect for wall jump
         if (isWallSliding && (Phaser.Input.Keyboard.JustDown(cursors.up) || Phaser.Input.Keyboard.JustDown(this.jKey))) {
             if (touchingLeftWall) {
+                this.canAirDodge = true;
                 this.playerFacedRight = true;
                 my.sprite.player.resetFlip();
                 my.sprite.player.setVelocityX(this.WALL_JUMP_X);  // Jump to the right
             } else if (touchingRightWall) {
+                this.canAirDodge = true;
                 this.playerFacedRight = false;
                 my.sprite.player.setFlip(true, false);
                 my.sprite.player.setVelocityX(-this.WALL_JUMP_X); // Jump to the left
@@ -716,7 +720,8 @@ class Platformer extends Phaser.Scene {
 
         //Basic Airdodge code
         // Airdodge in 8 directions
-        if (Phaser.Input.Keyboard.JustDown(this.hKey) && !this.dashingState) {
+        if (Phaser.Input.Keyboard.JustDown(this.hKey) && !this.dashingState && this.canAirDodge) {
+            this.canAirDodge = false;
             let inputX = 0; 
             let inputY = 0;
             const speed = this.airDodgeSpeed;
@@ -763,6 +768,10 @@ class Platformer extends Phaser.Scene {
             }
         }
 
+        //Give canDodge back (We do this when the player is also wallsliding)
+        if(my.sprite.player.body.blocked.down) {
+            this.canAirDodge = true;
+        }
         
 
     }
