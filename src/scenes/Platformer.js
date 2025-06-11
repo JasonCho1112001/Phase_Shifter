@@ -8,9 +8,9 @@ class Platformer extends Phaser.Scene {
     this.load.scenePlugin('AnimatedTiles', './lib/AnimatedTiles.js', 'animatedTiles', 'animatedTiles');
     }
 
-    init() {
+    init(data) {
         // variables and settings
-
+        this.currentMapKey = data.mapKey;   //stores current map based on scene calling in Load (not final implementation, potential way of using scene selection)
         //Physics + the world --------------------------------------------------------------
         this.physics.world.gravity.y = 1500;
         this.SCALE = 1.75;
@@ -73,31 +73,16 @@ class Platformer extends Phaser.Scene {
         this.LOOKAHEAD_DELAY = 400; 
 
         
-        
-        
-        
-        
-        
-        
-
-        
-
-        
-
-        
-       
-
-        
-
-        
     }
 
     create() {
         my.text.playerScoreText = this.add.text(-500,-500,"SCORE: "+this.playerScore)
+        
         // Create a new tilemap game object which uses 18x18 pixel tiles, and is
         // 45 tiles wide and 25 tiles tall.
-        this.map = this.add.tilemap("draft-platformer-level", 18, 18, 120, 20);
-    
+        //this.map = this.add.tilemap("draft-platformer-level", 18, 18, 120, 20); //how we originally called tile maps
+        this.map = this.add.tilemap(this.currentMapKey, 18, 18, 120, 20); //new more dynamic way
+
         // Add a tileset to the map
         // First parameter: name we gave the tileset in Tiled
         // Second parameter: key for the tilesheet (from this.load.image in Load.js)
@@ -463,10 +448,28 @@ class Platformer extends Phaser.Scene {
         //Jason's working code
         this.hKey = this.input.keyboard.addKey('H');
 
-        /* 
-
+        
         //Other peeps working code (Put your working code here and sort it when stable)
-        //Gas implementation [Debugged]
+        //Gas implementation, dynamic.
+        if (this.currentMapKey === "draft-platformer-level_arena") {
+            this.gas = this.physics.add.sprite(my.sprite.player.x - 800, my.sprite.player.y, "kenny-particles", "flame_04.png");
+            this.gas.setAlpha(1);
+            this.gas.setImmovable(true);
+            this.children.bringToTop(this.gas);
+            this.gas.setTint(0xffff00);
+            this.gas.body.setAllowGravity(false);
+            this.gas.displayHeight = this.scale.height * 2;
+            this.gas.displayWidth = 500;
+            this.gas.body.setSize(this.gas.displayWidth - 200, this.gas.displayHeight - 800);
+            this.gas.setVelocityX(90);
+
+            this.physics.add.overlap(my.sprite.player, this.gas, () => {
+                this.scene.start("lose");
+            });
+}
+
+        /*
+        //Gas implementation [Debugged], old way, this is for starting horizontal gas for arena level
         this.gas = this.physics.add.sprite(my.sprite.player.x - 800, my.sprite.player.y, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
         this.gas.setAlpha(1); //making the 'gas' png more transparent
         this.gas.setImmovable(true);
@@ -491,7 +494,6 @@ class Platformer extends Phaser.Scene {
 
 
         /* vertical gas implementation using tile spawn points, commented it out so that we can decide where to put these on the levels
-        let gasSpawn = this.map.getObjectLayer("Spawns").objects.find(o => o.name === "verticalGasStart");
         this.gasVertical = this.physics.add.sprite(gasSpawn.x, gasSpawn.y, "kenny-particles", "flame_04.png");
         this.gasVertical.setOrigin(0, 0);
         this.gasVertical.setAlpha(1);

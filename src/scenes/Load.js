@@ -20,8 +20,8 @@ class Load extends Phaser.Scene {
         this.load.audio("damageSound","error_007.ogg");
 
         this.load.image("tilemap_tiles", "tilemap_packed.png");      // Packed tilemap
-        this.load.tilemapTiledJSON("draft-platformer-level", "draft-platformer-level.tmj");   // Tilemap in JSON
-        
+        this.load.tilemapTiledJSON("draft-platformer-level", "draft-platformer-level.tmj");   // Tilemap in JSON or jasons level
+        //this.load.tilemapTiledJSON("draft-platformer-level_arena", "draft-platformer-level_arena.tmj");   //tilemap in JSON for arena level
 
         // Load the tilemap as a spritesheet
         /*this.load.spritesheet("tilemap_sheet", "tilemap_packed.png", {
@@ -107,7 +107,10 @@ class Load extends Phaser.Scene {
         })
 
          // ...and pass to the next Scene
-         this.scene.start("platformerScene");
+         //this.scene.start("platformerScene"); //old way of starting scene
+         //this.scene.start("platformerScene", { mapKey: "draft-platformer-level_arena" });
+         this.scene.start("platformerScene", { mapKey: "draft-platformer-level" }); //jasons level
+
     }
 
     // Never get here since a new scene is started in create()
