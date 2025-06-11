@@ -1,7 +1,6 @@
 class Platformer extends Phaser.Scene {
     constructor() {
         super("platformerScene");
-
     }
 
     preload() {
@@ -16,6 +15,10 @@ class Platformer extends Phaser.Scene {
         this.SCALE = 1.75;
         //Game
         this.playerScore = 0;
+
+        //Cheats
+        this.infiniteDodges = false;
+        this.godMode = false;
 
         //Basic stats ----------------------------------------------------------------------
         this.healthPoints = [];
@@ -327,7 +330,7 @@ class Platformer extends Phaser.Scene {
         //////////////////////////
         this.physics.add.overlap(my.sprite.player, this.projectileGroup, (obj1,obj2)=>{
             //Check if player is intangible
-            if(!this.intangible) {
+            if(!this.intangible && !this.godMode) {
                 //this.currHealthPointSprite = this.healthPoints[0];
                 //this.currHealthPointsSprite.destroy();    
                 this.currHealthPointSprite = this.healthPoints.pop();
@@ -416,6 +419,21 @@ class Platformer extends Phaser.Scene {
         this.sKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S);
         this.jKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
 
+        //Cheats
+        this.infiniteAirDodgeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ZERO);
+        this.godModeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.NINE);
+
+        this.input.keyboard.on('keydown', (event) => {
+            if (event.key === '0') {
+                this.infiniteDodges = !this.infiniteDodges;
+                console.log(`InfiniteDodges ${this.infiniteDodges ? "Enabled" : "Disabled"}`);
+            }
+
+            if (event.key === '9') {
+                this.godMode = !this.godMode;
+                console.log(`God Mode ${this.godMode ? "Enabled" : "Disabled"}`);
+            }
+        });
 
          this.input.keyboard.on('keydown-SPACE', () => {
             if(this.dashActive && this.playerFacedRight){
@@ -446,12 +464,12 @@ class Platformer extends Phaser.Scene {
         this.cameras.scoreCam = this.cameras.add();
         this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
         this.cameras.scoreCam.setPosition(-715,-430);
-        this.cameras.scoreCam.setZoom(this.SCALE*1.2);
+        this.cameras.scoreCam.setZoom(this.SCALE* 0.5 );
 
         this.cameras.healthPointsCam = this.cameras.add();
         this.cameras.healthPointsCam.startFollow(this.healthPoints[0], true, 0.25, 0.25) ;
         this.cameras.healthPointsCam.setPosition(500,-400);
-        this.cameras.healthPointsCam.setZoom(this.SCALE*2);
+        this.cameras.healthPointsCam.setZoom(this.SCALE* 1.1 );
 
 
         this.animatedTiles.init(this.map);
@@ -463,9 +481,10 @@ class Platformer extends Phaser.Scene {
         //Jason's working code
         this.hKey = this.input.keyboard.addKey('H');
 
-        /* 
+        
 
         //Other peeps working code (Put your working code here and sort it when stable)
+
         //Gas implementation [Debugged]
         this.gas = this.physics.add.sprite(my.sprite.player.x - 800, my.sprite.player.y, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
         this.gas.setAlpha(1); //making the 'gas' png more transparent
@@ -487,7 +506,7 @@ class Platformer extends Phaser.Scene {
         //     this.scene.start("lose");
         // });
 
-        */
+        
 
 
         /* vertical gas implementation using tile spawn points, commented it out so that we can decide where to put these on the levels
@@ -516,6 +535,7 @@ class Platformer extends Phaser.Scene {
                     let spawnY = this.cannonTiles[i].pixelY;
 
                     let projectile = this.physics.add.sprite(spawnX, spawnY + 9, 'pizzaBullet');
+                    projectile.setTint(0xff0000); 
                     this.projectileGroup.add(projectile);
                     projectile.setGravityY(-this.physics.world.gravity.y);
                     projectile.setVelocityX(-150); // Change as needed per cannon direction
@@ -525,6 +545,7 @@ class Platformer extends Phaser.Scene {
 
         // Destroy projectiles that hit a tile marked with "collides: true"
         this.physics.add.collider(this.projectileGroup, this.groundLayer, (projectile, tile) => {
+            
             projectile.destroy();
         });
     }
@@ -791,15 +812,15 @@ class Platformer extends Phaser.Scene {
             let currentVy = Phaser.Math.Linear(this.airDodgeVector.y, 0, progress);
             my.sprite.player.setVelocity(currentVx, currentVy);
 
-            if (elapsed >= this.airDodgeDuration) {
+            if (elapsed >= this.airDodgeDuration || my.sprite.player.body.blocked.down) {
                 this.dashingState = false;
                 my.sprite.player.body.allowGravity = true;
-                this.intangible = true;
+                this.intangible = false;
             }
         }
 
         //Give canDodge back (We do this when the player is also wallsliding)
-        if(my.sprite.player.body.blocked.down) {
+        if(my.sprite.player.body.blocked.down || this.infiniteDodges) {
             this.canAirDodge = true;
         }
         

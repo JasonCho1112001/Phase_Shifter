@@ -266,6 +266,7 @@
   </tile>
  </tileset>
  <tileset firstgid="113" name="food-tiles" tilewidth="18" tileheight="18" tilecount="112" columns="16">
+  <grid orientation="orthogonal" width="16" height="16"/>
   <image source="food_tilemap_packed.png" width="288" height="126"/>
  </tileset>
  <tileset firstgid="225" name="pixel_line_tiles" tilewidth="16" tileheight="16" tilecount="60" columns="10">
