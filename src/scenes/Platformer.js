@@ -643,7 +643,7 @@ class Platformer extends Phaser.Scene {
 
         //Instructions
         // update HTML description
-            document.getElementById('description').innerHTML = '<h2><br> A: Left // D: Right // J: Jump // H: Dodge </h2><br>Use the dodge to switch between red and blue tiles! Dodging also makes you immune to projectiles'
+            document.getElementById('description').innerHTML = '<h2><br> A: Left // D: Right // J: Jump // H: Dodge </h2><br>Use the dodge to switch between red and blue tiles! Dodging also makes you immune to projectiles. 9: God Mode // 0: Infinite Airdodges'
     }
     
     update() {
