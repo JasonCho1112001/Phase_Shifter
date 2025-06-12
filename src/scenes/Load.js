@@ -113,9 +113,8 @@ class Load extends Phaser.Scene {
         })
 
          // ...and pass to the next Scene
-         //this.scene.start("platformerScene"); //old way of starting scene
-         //this.scene.start("platformerScene", { mapKey: "draft-platformer-level_arena" });
-         this.scene.start("platformerScene", { mapKey: "draft-platformer-level" }); //jasons level
+         this.scene.start("platformerScene"); //old way of starting scene
+         //this.scene.start("platformerScene", { mapKey: "draft-platformer-level" }); //jasons level
 
     }
 

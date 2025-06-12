@@ -7,9 +7,8 @@ class Platformer extends Phaser.Scene {
     this.load.scenePlugin('AnimatedTiles', './lib/AnimatedTiles.js', 'animatedTiles', 'animatedTiles');
     }
 
-    init(data) {
+    init() {
         // variables and settings
-        this.currentMapKey = data.mapKey;   //stores current map based on scene calling in Load (not final implementation, potential way of using scene selection)
         //Physics + the world --------------------------------------------------------------
         this.physics.world.gravity.y = 1500;
         this.SCALE = 1.75;
@@ -97,7 +96,7 @@ class Platformer extends Phaser.Scene {
     }
 
     create() {
-        this.map = this.add.tilemap(this.currentMapKey, 18, 18, 120, 20); //new more dynamic way
+        this.map = this.add.tilemap("draft-platformer-level", 18, 18, 120, 20); //new more dynamic way
         this.spawn = this.map.getObjectLayer("Spawns").objects.find((obj) => obj.name === "spawnPoint");
         my.sprite.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, "playerOne");
         my.sprite.player.setScale(this.SCALE);
@@ -544,65 +543,31 @@ class Platformer extends Phaser.Scene {
         //Jason's working code
         this.hKey = this.input.keyboard.addKey('H');
 
-        
-        //Other peeps working code (Put your working code here and sort it when stable)
-        //Gas implementation, dynamic.
-        if (this.currentMapKey === "draft-platformer-level_arena") {
-            this.gas = this.physics.add.sprite(my.sprite.player.x - 800, my.sprite.player.y, "kenny-particles", "flame_04.png");
-            this.gas.setAlpha(1);
-            this.gas.setImmovable(true);
-            this.children.bringToTop(this.gas);
-            this.gas.setTint(0xffff00);
-            this.gas.body.setAllowGravity(false);
-            this.gas.displayHeight = this.scale.height * 2;
-            this.gas.displayWidth = 500;
-            this.gas.body.setSize(this.gas.displayWidth - 200, this.gas.displayHeight - 800);
-            this.gas.setVelocityX(90);
 
-            this.physics.add.overlap(my.sprite.player, this.gas, () => {
-                this.scene.start("lose");
-            });
-}
-
-        /*
-        //Gas implementation [Debugged], old way, this is for starting horizontal gas for arena level
-        this.gas = this.physics.add.sprite(my.sprite.player.x - 800, my.sprite.player.y, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time before gas comes
-        this.gas.setAlpha(1); //making the 'gas' png more transparent
-        this.gas.setImmovable(true);
-        this.children.bringToTop(this.gas);
-        this.gas.setTint(0xffff00); //sets color to green from the default grey from the flame png
-        this.gas.body.setAllowGravity(false);
-        this.gas.displayHeight = this.scale.height * 2;
-        this.gas.displayWidth = 500;
-        this.gas.body.setSize(this.gas.displayWidth - 100, this.gas.displayHeight - 800); //without minus 130, the player would get hit by hitbox before the visual smoke sprite 
-
-        this.gas.setVelocityX(90);
-
-
-
-        // //contact check, did the player get hit by the gas
-        // this.physics.add.overlap(my.sprite.player, this.gas, () => {
-
-        //     this.scene.start("lose");
-        // });
 
         
+        //Gas implementation [Debugged]
+        this.startGas = this.physics.add.sprite(my.sprite.player.x - 450, my.sprite.player.y - 50, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time beforethis.startGas comes
+        this.startGas.setAlpha(2); //making the this.startGas' png more transparent
+        this.startGas.setImmovable(true);
+        this.children.bringToTop(this.startGas);
+        this.startGas.setTint(0xffb701); //sets color to green from the default grey from the flame png
+        this.startGas.body.setAllowGravity(false);
+        this.startGas.displayHeight = this.scale.height * 2;
+        this.startGas.displayWidth = 600;
+        this.startGas.body.setSize(this.startGas.displayWidth - 200, this.startGas.displayHeight - 800); //without minus 130, the player would get hit by hitbox before the visual smoke sprite 
+
+        this.startGas.setVelocityX(90);
 
 
-        /* vertical gas implementation using tile spawn points, commented it out so that we can decide where to put these on the levels
-        this.gasVertical = this.physics.add.sprite(gasSpawn.x, gasSpawn.y, "kenny-particles", "flame_04.png");
-        this.gasVertical.setOrigin(0, 0);
-        this.gasVertical.setAlpha(1);
-        this.gasVertical.setImmovable(true);
-        this.gasVertical.setTint(0xffff00);
-        this.gasVertical.body.setAllowGravity(false);
-        this.gasVertical.displayHeight = 100;   //not tested, mess around with the number so it looks better for the levels
-        this.gasVertical.displayWidth = 100;    //not tested, mess around with the number so it looks better
-        this.gasVertical.body.setSize(this.gas.displayHeight, this.gas.displayWidth);   //same as above
-        this.physics.add.overlap(my.sprite.player, this.gasVertical, () => {
+
+        //contact check, did the player get hit by thethis.startGas
+        this.physics.add.overlap(my.sprite.player, this.startGas, () => {
+
             this.scene.start("lose");
-        })
-        */
+        });
+
+        
 
         //New cannon code
         this.time.addEvent({
@@ -647,26 +612,6 @@ class Platformer extends Phaser.Scene {
     }
     
     update() {
-        /*for(let elements of this.enemyList){
-            elements.x--;
-        }*/
-       /////////////////////////
-       
-        ////////////////////////
-        
-        //gas movement
-        // if (this.gas.x > this.map.widthInPixels + 100) {
-
-        //     this.gas.x = -this.gas.width;
-        // }
-        
-        /*
-        //vertical gas movement
-        if (this.gasVertical.y + this.gasVertical.displayHeight < 0) {
-
-            this.gasVertical.y = this.map.heightInPixels + 100;
-        }
-        */
 
         if(this.healthPoints == false){
             this.scene.start("lose");
