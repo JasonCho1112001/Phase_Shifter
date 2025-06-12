@@ -2285,15 +2285,27 @@
          "objects":[
                 {
                  "height":0,
-                 "id":7,
+                 "id":223,
+                 "name":"checkPoint",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1575.66666666667,
+                 "y":1752.66666666667
+                }, 
+                {
+                 "height":0,
+                 "id":227,
                  "name":"spawnPoint",
                  "point":true,
                  "rotation":0,
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":380.84,
-                 "y":3045.38
+                 "x":370.666666666667,
+                 "y":3047.33333333333
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -2302,7 +2314,7 @@
          "y":0
         }],
  "nextlayerid":8,
- "nextobjectid":223,
+ "nextobjectid":228,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

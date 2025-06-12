@@ -16,8 +16,14 @@ class Load extends Phaser.Scene {
         this.load.image("playerTwo","tile_0046.png");  
         this.load.image("pizzaBullet","tile_0105.png");  
 
+        //Load audio
         this.load.audio("collection","confirmation_002.ogg");
         this.load.audio("damageSound","error_007.ogg");
+        this.load.audio('footstep1', 'footstep_grass_000.ogg');
+        this.load.audio('footstep2', 'footstep_grass_001.ogg');
+        this.load.audio('munch', 'munch.ogg');
+        this.load.audio('jump', 'impactPlate_light_002.ogg');
+        this.load.audio('coin', 'impactMining_004.ogg');
 
         this.load.image("tilemap_tiles", "tilemap_packed.png");      // Packed tilemap
         this.load.tilemapTiledJSON("draft-platformer-level", "draft-platformer-level.tmj");   // Tilemap in JSON or jasons level

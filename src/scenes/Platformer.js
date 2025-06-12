@@ -75,16 +75,34 @@ class Platformer extends Phaser.Scene {
         this.LOOKAHEAD_THRESHOLD = 250;  // Minimum horizontal speed before lookahead activates
         this.LOOKAHEAD_DELAY = 400; 
 
-        
+        //Checkpoints
+        this.checkPointReached = false;
+
+        //Audio
+        this.footsteps = [
+            this.sound.add('footstep1'),
+            this.sound.add('footstep2')
+        ];
+        this.currentFootstepIndex = 0;
+        this.footstepCooldown = 0; // time before next sound
+        this.FOOTSTEP_INTERVAL = 150; // ms between steps
+
+        //Jump
+        this.jumpSfx = this.sound.add('jump');
+        this.jumpSfx.setVolume(0.75);
+
+        //Dodge
+        this.dodgeSfx = this.sound.add('coin');
+        this.dodgeSfx.setVolume(0.9);
     }
 
     create() {
-        my.text.playerScoreText = this.add.text(-500,-500,"SCORE: "+this.playerScore)
-        
-        // Create a new tilemap game object which uses 18x18 pixel tiles, and is
-        // 45 tiles wide and 25 tiles tall.
-        //this.map = this.add.tilemap("draft-platformer-level", 18, 18, 120, 20); //how we originally called tile maps
         this.map = this.add.tilemap(this.currentMapKey, 18, 18, 120, 20); //new more dynamic way
+        this.spawn = this.map.getObjectLayer("Spawns").objects.find((obj) => obj.name === "spawnPoint");
+        my.sprite.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, "playerOne");
+        my.sprite.player.setScale(this.SCALE);
+
+        
 
         // Add a tileset to the map
         // First parameter: name we gave the tileset in Tiled
@@ -103,7 +121,23 @@ class Platformer extends Phaser.Scene {
         });
 
         /////////////////////////////////////
-        this.spawn = this.map.getObjectLayer("Spawns").objects.find((obj) => obj.name === "spawnPoint");
+        
+
+        // Checkpoint creation
+        const checkpointData = this.map.getObjectLayer("Spawns").objects.find(obj => obj.name === "checkPoint");
+
+        // Create an invisible rectangle
+        this.checkPoint = this.add.rectangle(
+            checkpointData.x,
+            checkpointData.y,
+            checkpointData.width,
+            checkpointData.height,
+            0xff0000,
+            0 //alpha
+        );
+
+    // Enable Arcade Physics on it
+    this.physics.add.existing(this.checkPoint, true); // true = static body
 
         this.redTiles = this.groundLayer.filterTiles((tile) => {
                 if(tile.properties.vision == "red"){
@@ -111,6 +145,7 @@ class Platformer extends Phaser.Scene {
                 } else{
                     return false;
                 }
+                
         });
 
         this.blueTiles = this.groundLayer.filterTiles((tile) => {
@@ -123,6 +158,10 @@ class Platformer extends Phaser.Scene {
         for(let elements of this.blueTiles){
                     elements.tint = 0x4a4a4a;
                 }
+        for(let elements of this.redTiles){
+            elements.tint = 0xff0000;
+        }
+        
         
         this.cannonTiles = this.groundLayer.filterTiles((tile) =>{
             if(tile.properties.isCannon){
@@ -211,16 +250,16 @@ class Platformer extends Phaser.Scene {
             elements.x--;
         }*/
 
-// TODO: Add movement vfx here
+        //Walking
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
-            frame: ['muzzle_03.png', 'muzzle_05.png'], 
+            frame: ['smoke_03.png', 'smoke_09.png'],
             // TODO: Try: add random: true
-            scale: {start: 0.08, end: 0.03},
+            random: true,
+            scale: {start: 0.04, end: 0.01},
             // TODO: Try: maxAliveParticles: 8,
-            lifespan: 185,
+            lifespan: 200,
             // TODO: Try: gravityY: -400,
-            radial:true,
-            alpha: {start: .6, end: 0.1}, 
+            alpha: {start: 1, end: 0.1}, 
         });
 
         my.vfx.jumping = this.add.particles(0, 0, "kenny-particles", {
@@ -248,25 +287,53 @@ class Platformer extends Phaser.Scene {
             // TODO: Try: gravityY: -400,
             alpha: {start: 1, end: 0.2}, 
         }); 
- 
         
+        //Jumping VFX
+        my.vfx.jump = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['muzzle_01.png','muzzle_02.png', 'muzzle_03.png', 'muzzle_04.png','muzzle_05.png',],
+            // TODO: Try: add random: true
+            random: true,
+            scale: {start: 0.1, end: 0.1},
+            // TODO: Try: maxAliveParticles: 8,
+            lifespan: 200,
+            // TODO: Try: gravityY: -400,
+            alpha: {start: 0.75, end: 0.1}, 
+        });
+        my.vfx.jump.startFollow(my.sprite.player, my.sprite.player.displayWidth / 2 - 20, my.sprite.player.displayHeight / 2 - 20, false);
+       
+        //Trail (blue)
+        my.vfx.trail = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['spark_01.png', 'spark_02.png', 'spark_03.png', 'spark_04.png'],
+            // TODO: Try: add random: true
+            random: true,
+            scale: {start: 0.025, end: 0.075},
+            // TODO: Try: maxAliveParticles: 8,
+            lifespan: 200,
+            // TODO: Try: gravityY: -400,
+            alpha: {start: 1, end: 0.75}, 
+            frequency: 10,
+            tint: 0x00ffff,
+        });
+
+
         my.vfx.walking.stop();
         my.vfx.jumping.stop();
         my.vfx.sparkle.stop();
-
+        my.vfx.jump.stop();
         
-
-
+        //Control depth
+        my.sprite.player.setDepth(1);   // Make player depth 1
+        my.vfx.walking.setDepth(0);     
+        //my.vfx.walls.setDepth(2);
+        my.vfx.jump.setDepth(2);
+        //my.vfx.trail.setDepth(0);
 
         for(let i = 0;i <60;i= i+20){
             this.healthPoints.push(this.add.sprite(i+600,-500,"playerOne"));
         }
 
     
-        my.sprite.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, "playerOne");
-        //this.physics.world.setBounds(0,0,120*18,20*18);
-        //my.sprite.player.setCollideWorldBounds(true);
-        my.sprite.player.setScale(this.SCALE);
+        
         //////////////////////////////
         let collisionHandler = (obj1,obj2) =>{
 
@@ -280,6 +347,7 @@ class Platformer extends Phaser.Scene {
             return true
          }
         // Enable collision handling
+        this.physics.world.TILE_BIAS = 40;
         this.physics.add.collider(my.sprite.player, this.groundLayer, collisionHandler, processHandler);
          ///////////////////////////////////////////////
        
@@ -287,14 +355,14 @@ class Platformer extends Phaser.Scene {
         // TODO: Add coin collision handler
         this.physics.add.overlap(my.sprite.player, this.collectibleGroup, (obj1, obj2) => {
             this.playerScore++;
-            my.text.playerScoreText.setText("SCORE: "+ this.playerScore);
+            my.text.pizzaCount.setText("Pizzas: " + this.playerScore);
            
             obj2.destroy(); // remove coin on overlap
             
             my.vfx.sparkle.x = obj2.x;
             my.vfx.sparkle.y = obj2.y;
-            this.sound.play("collection",{
-                volume:.7
+            this.sound.play("munch",{
+                volume:.3
             });
             my.vfx.sparkle.start();
            
@@ -316,22 +384,23 @@ class Platformer extends Phaser.Scene {
         this.physics.add.overlap(my.sprite.player, this.projectileGroup, (obj1,obj2)=>{
             //Check if player is intangible
             if(!this.intangible && !this.godMode) {
-                //this.currHealthPointSprite = this.healthPoints[0];
-                //this.currHealthPointsSprite.destroy();    
-                this.currHealthPointSprite = this.healthPoints.pop();
-
-                console.log("Took DAMAGE");
-                if(this.currHealthPointSprite){
-                    this.currHealthPointSprite.destroy();
-                    this.sound.play("damageSound",{
+                this.sound.play("damageSound",{
                     volume:.8 
                     });
                     this.cameras.main.shake(100,.008 ); 
-                    my.sprite.player.x = this.spawn.x; 
-                    my.sprite.player.y = this.spawn.y; 
+                    if(this.checkPointReached == true) {
+                        console.log("checkpointReached: " + this.checkPointReached);
+                        console.log("CheckPoint");
+                        my.sprite.player.x = this.checkPoint.x; 
+                        my.sprite.player.y = this.checkPoint.y; 
+                    } else {
+                        console.log("checkpointReached: " + this.checkPointReached);
+                        console.log("Spawn");
+                        my.sprite.player.x = this.spawn.x; 
+                        my.sprite.player.y = this.spawn.y; 
+                    }
+                    
                     my.sprite.player.setVelocityX(0);
-
-                }
             }
             else {
                 //If they are, give the airdodge back
@@ -392,8 +461,17 @@ class Platformer extends Phaser.Scene {
             my.vfx.sparkle.start();
         });
 
-
-
+        //Checkpoint collision
+        this.physics.add.overlap(my.sprite.player, this.checkPoint, (player, checkpoint) => {
+            if (!this.checkPointReached) {
+                this.checkPointReached = true;
+                this.sound.play("collection", { volume: 0.7 });
+                my.vfx.sparkle.x = checkpoint.x;
+                my.vfx.sparkle.y = checkpoint.y;
+                my.vfx.sparkle.start();
+                console.log("checkpointReached: " + this.checkPointReached);
+            }
+        });
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
         this.rKey = this.input.keyboard.addKey('R');
@@ -446,10 +524,10 @@ class Platformer extends Phaser.Scene {
         this.cameras.main.setDeadzone(50, 50);
         this.cameras.main.setZoom(this.SCALE * 1.1 /*1.1*/);
 
-        this.cameras.scoreCam = this.cameras.add();
-        this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
-        this.cameras.scoreCam.setPosition(-715,-430);
-        this.cameras.scoreCam.setZoom(this.SCALE* 0.5 );
+        // this.cameras.scoreCam = this.cameras.add();
+        // this.cameras.scoreCam.startFollow(my.text.playerScoreText, true, 0.25, 0.25);
+        // this.cameras.scoreCam.setPosition(-715,-430);
+        // this.cameras.scoreCam.setZoom(this.SCALE* 0.5 );
 
         this.cameras.healthPointsCam = this.cameras.add();
         this.cameras.healthPointsCam.startFollow(this.healthPoints[0], true, 0.25, 0.25) ;
@@ -536,7 +614,7 @@ class Platformer extends Phaser.Scene {
                     let spawnY = this.cannonTiles[i].pixelY;
 
                     let projectile = this.physics.add.sprite(spawnX, spawnY + 9, 'pizzaBullet');
-                    projectile.setTint(0xff0000); 
+                    projectile.setTint(0xFF0000); 
                     this.projectileGroup.add(projectile);
                     projectile.setGravityY(-this.physics.world.gravity.y);
                     projectile.setVelocityX(-150); // Change as needed per cannon direction
@@ -549,6 +627,23 @@ class Platformer extends Phaser.Scene {
             
             projectile.destroy();
         });
+
+        //Text
+        let centerX = this.cameras.main.width / 2;
+        let centerY = this.cameras.main.height / 2;
+
+        my.text = my.text || {};
+        my.text.pizzaCount = this.add.text(centerX + 225, centerY - 125, "Pizzas: 0", {
+            fontFamily: 'Courier New',
+            fontSize: '16px',
+            color: '#ffffff'
+        }).setOrigin(1, 0); 
+
+        my.text.pizzaCount.setScrollFactor(0); 
+
+        //Instructions
+        // update HTML description
+            document.getElementById('description').innerHTML = '<h2><br> A: Left // D: Right // J: Jump // H: Dodge </h2><br>Use the dodge to switch between red and blue tiles! Dodging also makes you immune to projectiles'
     }
     
     update() {
@@ -593,37 +688,26 @@ class Platformer extends Phaser.Scene {
                     my.sprite.player.setAccelerationX(-this.ACCELERATION);
                     my.sprite.player.setFlip(true, false);
                     my.sprite.player.anims.play('walk', true);
-                    // TODO: add particle following code here
-                    my.vfx.walking.startFollow(my.sprite.player, (my.sprite.player.displayWidth/2)+10, my.sprite.player.displayHeight/2-5, false);
-                    my.vfx.walking.particleRotate = 90;
 
+                    //Particle code
+                    my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
                     my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
-
-                    // Only play smoke effect if touching the ground
-
-                    if (my.sprite.player.body.blocked.down) {
-
+                    if (my.sprite.player.body.blocked.down) 
                         my.vfx.walking.start();
-
-                    }
+                    else { my.vfx.walking.stop(); }
 
                 } else if((this.dKey.isDown || cursors.right.isDown)) {
                     this.playerFacedRight = true;
                     my.sprite.player.setAccelerationX(this.ACCELERATION);
                     my.sprite.player.resetFlip();
                     my.sprite.player.anims.play('walk', true);
-                    // TODO: add particle following code here
-                    my.vfx.walking.startFollow(my.sprite.player, (my.sprite.player.displayWidth/2)-25, my.sprite.player.displayHeight/2-5, false);
-                    my.vfx.walking.particleRotate = -90;
-                    my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
 
-                    // Only play smoke effect if touching the ground
-
-                    if (my.sprite.player.body.blocked.down) {
-
+                    //Particle code
+                    my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-20, my.sprite.player.displayHeight/2-5, false);
+                    my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
+                    if (my.sprite.player.body.blocked.down) 
                         my.vfx.walking.start();
-
-                    }
+                    else { my.vfx.walking.stop(); }
 
                 } else {
                     // Set acceleration to 0 and have DRAG take over
@@ -681,12 +765,14 @@ class Platformer extends Phaser.Scene {
         if(!my.sprite.player.body.blocked.down) {
             my.sprite.player.anims.play('jump');
         }
-        if((my.sprite.player.body.blocked.down || (this.doubleJumpAvailable >0) || ((my.sprite.player.body.blocked.right || my.sprite.player.body.blocked.left) && this.wallJumpActive)) && (Phaser.Input.Keyboard.JustDown(cursors.up) || this.jKey.isDown)) {
+        if(my.sprite.player.body.blocked.down && !this.isJumping && (Phaser.Input.Keyboard.JustDown(cursors.up) || this.jKey.isDown)) {
             my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
-            my.vfx.jumping.x = my.sprite.player.x;
-            my.vfx.jumping.y = my.sprite.player.y;
-            my.vfx.jumping.start();
             
+            // Start jump vfx
+            my.vfx.jump.explode();
+            //Audio
+            this.jumpSfx.play();
+
             //Variable Jump
             this.isJumping = true;
             this.jumpTimer = 0;
@@ -719,9 +805,10 @@ class Platformer extends Phaser.Scene {
             this.wallJumpLockoutTimer = this.time.now;
 
             // Start jump vfx
-            //my.vfx.jump.explode();
+            my.vfx.jump.explode();
             //Audio
-            //this.jumpSfx.play();
+            this.jumpSfx.play();
+            
         }
         //Handle end of wallJumpLocked
         if (this.isWallJumpLocked) {
@@ -771,6 +858,8 @@ class Platformer extends Phaser.Scene {
         //Basic Airdodge code
         // Airdodge in 8 directions
         if (Phaser.Input.Keyboard.JustDown(this.hKey) && !this.dashingState && this.canAirDodge) {
+            this.dodgeSfx.play();
+
             this.canAirDodge = false;
             let inputX = 0; 
             let inputY = 0;
@@ -813,10 +902,15 @@ class Platformer extends Phaser.Scene {
             let currentVy = Phaser.Math.Linear(this.airDodgeVector.y, 0, progress);
             my.sprite.player.setVelocity(currentVx, currentVy);
 
-            if (elapsed >= this.airDodgeDuration || my.sprite.player.body.blocked.down) {
+            //VFX
+            my.vfx.trail.startFollow(my.sprite.player, my.sprite.player.displayWidth / 2 - 20, my.sprite.player.displayHeight / 2 - 15, false);
+            my.vfx.trail.start();
+
+            if (elapsed >= this.airDodgeDuration || my.sprite.player.body.blocked.down && currentVy != 0) {
                 this.dashingState = false;
                 my.sprite.player.body.allowGravity = true;
                 this.intangible = false;
+                my.vfx.trail.stop();
             }
         }
 
@@ -825,7 +919,23 @@ class Platformer extends Phaser.Scene {
             this.canAirDodge = true;
         }
         
+        //Audio
+        //Reduce cooldown each frame
+        this.footstepCooldown -= this.game.loop.delta;
 
+        const isRunning = (cursors.left.isDown || this.aKey.isDown || cursors.right.isDown || this.dKey.isDown);
+        const isOnGround = my.sprite.player.body.blocked.down;
+
+        if (isRunning && isOnGround && this.footstepCooldown <= 0) {
+            this.footsteps[this.currentFootstepIndex].play({ volume: 0.25 });
+            
+            // Alternate to the other sound for next time
+            this.currentFootstepIndex = (this.currentFootstepIndex + 1) % this.footsteps.length;
+
+            // Reset cooldown
+            this.footstepCooldown = this.FOOTSTEP_INTERVAL;
+        }
+    
     }
 
     SwitchVision()
@@ -834,19 +944,50 @@ class Platformer extends Phaser.Scene {
                 this.visionState = "blue";
                 console.log(this.blueTiles)
                  for(let elements of this.blueTiles){
-                    elements.tint =  0xFFFFF0;
+                    elements.tint =  0x00ffff;
                 }
                  for(let elements of this.redTiles){
                     elements.tint = 0x4a4a4a;
                 }
+
+                my.vfx.trail.destroy();
+                my.vfx.trail = null; 
+                //Trail (blue)
+                my.vfx.trail = this.add.particles(0, 0, "kenny-particles", {
+                    frame: ['spark_01.png', 'spark_02.png', 'spark_03.png', 'spark_04.png'],
+                    // TODO: Try: add random: true
+                    random: true,
+                    scale: {start: 0.025, end: 0.075},
+                    // TODO: Try: maxAliveParticles: 8,
+                    lifespan: 200,
+                    // TODO: Try: gravityY: -400,
+                    alpha: {start: 1, end: 0.75}, 
+                    frequency: 10,
+                    tint: 0x00ffff,
+                });
             }else{
                  this.visionState = "red";
                  for(let elements of this.redTiles){
-                    elements.tint =  0xFFFFF0;
+                    elements.tint =  0xff0000;
                 }
                  for(let elements of this.blueTiles){
                     elements.tint = 0x4a4a4a;
                 }
+
+                my.vfx.trail.destroy();
+                my.vfx.trail = null; 
+                my.vfx.trail = this.add.particles(0, 0, "kenny-particles", {
+                    frame: ['spark_01.png', 'spark_02.png', 'spark_03.png', 'spark_04.png'],
+                    // TODO: Try: add random: true
+                    random: true,
+                    scale: {start: 0.025, end: 0.075},
+                    // TODO: Try: maxAliveParticles: 8,
+                    lifespan: 200,
+                    // TODO: Try: gravityY: -400,
+                    alpha: {start: 1, end: 0.75}, 
+                    frequency: 10,
+                    tint: 0xff0000,
+                });
             }
     }
         
