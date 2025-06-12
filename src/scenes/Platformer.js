@@ -93,6 +93,9 @@ class Platformer extends Phaser.Scene {
         //Dodge
         this.dodgeSfx = this.sound.add('coin');
         this.dodgeSfx.setVolume(0.9);
+
+        //Second Gas variables
+        this.leftGasTriggered = false;
     }
 
     create() {
@@ -547,6 +550,8 @@ class Platformer extends Phaser.Scene {
 
         
         //Gas implementation [Debugged]
+
+        //starting gas
         this.startGas = this.physics.add.sprite(my.sprite.player.x - 450, my.sprite.player.y - 50, "kenny-particles", "flame_04.png"); //change the number if the player doesnt have enough time beforethis.startGas comes
         this.startGas.setAlpha(2); //making the this.startGas' png more transparent
         this.startGas.setImmovable(true);
@@ -556,17 +561,29 @@ class Platformer extends Phaser.Scene {
         this.startGas.displayHeight = this.scale.height * 2;
         this.startGas.displayWidth = 600;
         this.startGas.body.setSize(this.startGas.displayWidth - 200, this.startGas.displayHeight - 800); //without minus 130, the player would get hit by hitbox before the visual smoke sprite 
-
         this.startGas.setVelocityX(90);
-
-
-
         //contact check, did the player get hit by thethis.startGas
         this.physics.add.overlap(my.sprite.player, this.startGas, () => {
 
             this.scene.start("lose");
         });
 
+        //second trigger gas
+        this.leftMovingGas = this.physics.add.sprite(2400, 2400, "kenny-particles", "flame_04.png");
+        this.leftMovingGas.setAlpha(2);
+        this.leftMovingGas.setImmovable(true);
+        this.children.bringToTop(this.leftMovingGas);
+        this.leftMovingGas.setTint(0xffb701);
+        this.leftMovingGas.body.setAllowGravity(false);
+        this.leftMovingGas.displayHeight = this.scale.height;
+        this.leftMovingGas.displayWidth = 600;
+        this.leftMovingGas.body.setSize(this.leftMovingGas.displayWidth - 300, this.leftMovingGas.displayHeight - 250);
+        this.leftMovingGas.setVelocityX(0); //starts at 0 speed since its not triggered yet
+        //contact check
+        this.physics.add.overlap(my.sprite.player, this.leftMovingGas, () => {
+
+            this.scene.start("lose");
+        });
         
 
         //New cannon code
@@ -881,6 +898,12 @@ class Platformer extends Phaser.Scene {
             this.footstepCooldown = this.FOOTSTEP_INTERVAL;
         }
     
+        //trigger for leftgas to move
+        if (!this.leftGasTriggered && my.sprite.player.x <= 1742 && my.sprite.player.y <= 2646) {
+            this.leftMovingGas.setVelocityX(-90);  // move left
+            this.leftGasTriggered = true;
+            console.log("Left-moving gas triggered!");
+        }
     }
 
     SwitchVision()
