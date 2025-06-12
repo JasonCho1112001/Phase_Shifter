@@ -560,7 +560,7 @@ class Platformer extends Phaser.Scene {
         this.startGas.body.setAllowGravity(false);
         this.startGas.displayHeight = this.scale.height * 2;
         this.startGas.displayWidth = 600;
-        this.startGas.body.setSize(this.startGas.displayWidth - 200, this.startGas.displayHeight - 800); //without minus 130, the player would get hit by hitbox before the visual smoke sprite 
+        this.startGas.body.setSize(this.startGas.displayWidth - 400, this.startGas.displayHeight - 800); //without minus 130, the player would get hit by hitbox before the visual smoke sprite 
         this.startGas.setVelocityX(90);
         //contact check, did the player get hit by thethis.startGas
         this.physics.add.overlap(my.sprite.player, this.startGas, () => {
@@ -577,7 +577,7 @@ class Platformer extends Phaser.Scene {
         this.leftMovingGas.body.setAllowGravity(false);
         this.leftMovingGas.displayHeight = this.scale.height;
         this.leftMovingGas.displayWidth = 600;
-        this.leftMovingGas.body.setSize(this.leftMovingGas.displayWidth - 300, this.leftMovingGas.displayHeight - 250);
+        this.leftMovingGas.body.setSize(this.leftMovingGas.displayWidth - 500, this.leftMovingGas.displayHeight - 250);
         this.leftMovingGas.setVelocityX(0); //starts at 0 speed since its not triggered yet
         //contact check
         this.physics.add.overlap(my.sprite.player, this.leftMovingGas, () => {
@@ -900,7 +900,7 @@ class Platformer extends Phaser.Scene {
     
         //trigger for leftgas to move
         if (!this.leftGasTriggered && my.sprite.player.x <= 1742 && my.sprite.player.y <= 2646) {
-            this.leftMovingGas.setVelocityX(-90);  // move left
+            this.leftMovingGas.setVelocityX(-110);  // move left
             this.leftGasTriggered = true;
             console.log("Left-moving gas triggered!");
         }
